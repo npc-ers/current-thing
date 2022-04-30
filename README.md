@@ -1,3 +1,7 @@
+# Current Thing
+
+![NPC](NPC.png)
+
 # vyper-token-mix
 
 A bare-bones implementation of the Ethereum [ERC-20 standard](https://eips.ethereum.org/EIPS/eip-20), written in [Vyper](https://github.com/vyperlang/vyper).
@@ -6,7 +10,7 @@ A bare-bones implementation of the Ethereum [ERC-20 standard](https://eips.ether
 
 1. [Install Brownie](https://eth-brownie.readthedocs.io/en/stable/install.html), if you haven't already.
 
-   ```
+
 ## Basic Use
 
 This mix provides a [simple template](contracts/Token.vy) upon which you can build your own token, as well as unit tests providing 100% coverage for core ERC20 functionality.
