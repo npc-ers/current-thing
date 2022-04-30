@@ -16,12 +16,17 @@ def thing(CurrentThing, accounts):
 
 
 @pytest.fixture(scope="module")
-def npc(NPC, accounts):
-    return NPC.deploy({'from': accounts[0]})
+def npc(NPC, accounts, thing):
+    nft = NPC.deploy(thing, {'from': accounts[0]})
+    thing.setNFT(nft, {'from': accounts[0]}) 
+    return nft
 
 @pytest.fixture(scope="module")
 def npc_minted(npc, accounts):
     npc.mint(accounts[0])
     return npc
 
-
+@pytest.fixture(scope="module")
+def npc_staked(npc_minted, accounts):
+    npc_minted.supportCurrentThing(0, "Current Thing")
+    return npc_minted

@@ -20,6 +20,10 @@ interface ERC721Receiver:
         ) -> bytes32: view
 
 
+interface ThingToken:
+    def supportCurrentThing(tokenId: uint256, addr: address): nonpayable
+    def epoch() -> uint256: view
+
 event Transfer:
     sender: indexed(address)
     receiver: indexed(address)
@@ -70,13 +74,16 @@ SUPPORTED_INTERFACES: constant(bytes4[5]) = [
 
 # NPCers
 currentThing: public(HashMap[uint256, String[128]])
+token: public(ThingToken)
+staked: HashMap[uint256, HashMap[uint256, bool]] # epoch -> token
 
 @external
-def __init__():
+def __init__(token_addr: address):
     self.owner = msg.sender
     self.minter = msg.sender
     NAME = "NPCers"
     SYMBOL = "NPC"
+    self.token = ThingToken(token_addr)
     self.baseURI = "ipfs://"
     self.contractStemURI = "QmUKHs5tM2wikjce3EfzbjCBC738pzE5yXr9i29eSMf4R5"
     self.defaultURI = "QmQ7KYqYMfCtKUKUoVLw6Kane7ZZBZ7pNhffXUeVVyTyH7"
@@ -222,6 +229,8 @@ def _transferFrom(_from: address, _to: address, _tokenId: uint256, _sender: addr
     assert self._isApprovedOrOwner(_sender, _tokenId)
     # Throws if `_to` is the zero address
     assert _to != ZERO_ADDRESS
+    # Check token is not staked this epoch
+    assert self.staked[self.token.epoch()][_tokenId] != True, "Token is Staked"
     # Clear approval. Throws if `_from` is not the current owner
     self._clearApproval(_from, _tokenId)
     # Remove NFT. Throws if `_tokenId` is not a valid NFT
@@ -520,9 +529,19 @@ def tokenOfOwnerByIndex(owner: address, index: uint256) -> uint256:
     assert False, "ERC721Enumerable: global index out of bounds"
     return 0
 
+@external
+def setThingToken(addr: address):
+    assert msg.sender == self.owner
+    self.token = ThingToken(addr)
 
 @external
-def setCurrentThing(tokenId: uint256, currentThing: String[128]):
+def supportCurrentThing(tokenId: uint256, currentThing: String[128]):
     assert self.idToOwner[tokenId] == msg.sender
+	
+    self.staked[self.token.epoch()][tokenId] = True
+
+    # XXX Disable transfer until next Epoch
     self.currentThing[tokenId] = currentThing
+    self.token.supportCurrentThing(tokenId, msg.sender)
+
 
