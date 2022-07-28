@@ -1,10 +1,41 @@
-# @version ^0.3.3
+# @version 0.3.3
 
 """
 @title Current Thing
 @notice Based on the ERC-20 token standard as defined at
         https://eips.ethereum.org/EIPS/eip-20
+
+         :=+******++=-:                 
+      -+*+======------=+++=:            
+     #+========------------=++=.        
+    #+=======------------------++:      
+   *+=======--------------------:++     
+  =*=======------------------------*.   
+ .%========-------------------------*.  
+ %+=======-------------------------:-#  
++*========--------------------------:#  
+%=========--------------------------:#. 
+%=========--------------------+**=--:++ 
+#+========-----=*#%#=--------#@@@@+-::*:
+:%========-----+@@@@%=-------=@@@@#-::+=
+ -#======-------+@@@%=----=*=--+**=-::#:
+  :#+====---------==----===@%=------::% 
+    #+===-------------======@%=------:=+
+    .%===------------=======+@%------::#
+     #+==-----------=========+@%-------+
+     %===------------*%%%%%%%%@@#-----#.
+     %====-----------============----#: 
+     *+==#+----------+##%%%%%%%%@--=*.  
+     -#==+%=---------=+=========--*=    
+      +===+%+--------------------*-     
+       =====*#=------------------#      
+       .======*#*=------------=*+.      
+         -======+*#*+--------*+         
+          .-========+***+++=-.          
+             .-=======:           
+
 """
+
 
 from vyper.interfaces import ERC20
 
@@ -36,37 +67,30 @@ balances: HashMap[address, uint256]
 allowances: HashMap[address, HashMap[address, uint256]]
 
 npc: public(NPC)
-MAX_NFT_SUPPLY: constant(uint256) = 1000
+MAX_NFT_SUPPLY: constant(uint256) = 10000
 owner: address
 
 YEAR: constant(uint256) = 86400 * 365
 EMISSION_RATE: constant(uint256) = 1_000_000 * 10 ** 18 / YEAR
 
-currentThing: String[128]
-epoch: public(uint256)
-epoch_supporters: HashMap[uint256, HashMap[uint256, address]] # epoch -> id -> addr
-epoch_timestamps: HashMap[uint256, HashMap[uint256, uint256]] # epoch -> id -> timestamp
+merkle_depth: constant(uint256) = 10
 
+# Epoch
+current_epoch : public(uint256)
+current_thing: public(HashMap[uint256, String[128]]) 
+epoch_merkle_roots: public(HashMap[uint256, bytes32])  # Map epoch to Merkle Root
+epoch_bonus_amounts: public(HashMap[uint256, uint256]) # Map epoch to bonus
+epoch_bonus_claims: public(HashMap[uint256, HashMap[address, bool]])
 
 @external
-def __init__(_decimals: uint256, _total_supply: uint256):
+def __init__():
     self.name = "Current Thing"
     self.symbol = "THING"
-    self.decimals = _decimals
-    self.balances[msg.sender] = _total_supply
-    self.totalSupply = _total_supply
+    self.decimals = 18
     self.owner = msg.sender
-    log Transfer(ZERO_ADDRESS, msg.sender, _total_supply)
+    self.current_epoch = 0
+    self.current_thing[0] = "First Current Thing"
 
-
-@view
-@internal
-def _calc_epoch_inflation(addr: address) -> uint256:
-    inflation: uint256 = 0
-    for i in range(MAX_NFT_SUPPLY):
-        if self.epoch_timestamps[self.epoch][i] > 0:
-             inflation += (block.timestamp - self.epoch_timestamps[self.epoch][i]) * EMISSION_RATE
-    return inflation
 
 @view
 @external
@@ -76,7 +100,7 @@ def balanceOf(_owner: address) -> uint256:
     @param _owner Address to query the balance of
     @return Token balance
     """
-    return self.balances[_owner] + self._calc_epoch_inflation(_owner)
+    return self.balances[_owner] 
 
 
 @view
@@ -151,26 +175,95 @@ def transferFrom(_from : address, _to : address, _value : uint256) -> bool:
 
 
 @external
-def setNFT(addr: address):
+def set_nft_addr(addr: address):
     assert msg.sender == self.owner
     self.npc = NPC(addr)
 
+
 @external
-def supportCurrentThing(tokenId: uint256, addr: address):
-    self.epoch_supporters[self.epoch][tokenId] = addr
-    self.epoch_timestamps[self.epoch][tokenId] = block.timestamp
+def new_current_thing(current_thing: String[128], bonus_amount: uint256,  merkle_root: bytes32):
+    assert msg.sender == self.owner
+    self.epoch_merkle_roots[self.current_epoch] = merkle_root
+    self.epoch_bonus_amounts[self.current_epoch] = bonus_amount
+    self.current_epoch += 1
+    self.current_thing[self.current_epoch] = current_thing
 
 
 @internal
-def _commit_epoch_balances():
-    for i in range(MAX_NFT_SUPPLY):
-        addr: address = self.epoch_supporters[self.epoch][i]
-        self.balances[addr] += (block.timestamp - self.epoch_timestamps[self.epoch][i]) * EMISSION_RATE
+def _mint(addr: address, amount: uint256):
+    self.balances[addr] += amount
+    self.totalSupply += amount
+   
+
+@external
+def test_mint(addr: address, amount: uint256):
+    self._mint(addr, amount)
+
+@external
+def claim_bonus(epoch: uint256, _leaf: bytes32, _index: uint256, _proof: bytes32[merkle_depth]):
+    #assert self._calc_merkle_root(_leaf, _index, _proof) == self.epoch_merkle_roots[epoch]
+    assert self.epoch_bonus_claims[epoch][msg.sender] != True, "Already claimed"
+    assert self.epoch_bonus_amounts[epoch] > 0, "Bonus not set"
+
+    self._mint(msg.sender, self.epoch_bonus_amounts[epoch])
+    self.epoch_bonus_claims[epoch][msg.sender] = True
+
+    
+
+# MERKLE FUNCTIONS
+@internal
+@view
+def _calc_merkle_root(
+    _leaf: bytes32, _index: uint256, _proof: bytes32[merkle_depth]
+) -> bytes32:
+    """
+    @dev Compute the merkle root
+    @param _leaf Leaf hash to verify.
+    @param _index Position of the leaf hash in the Merkle tree.
+    @param _proof A Merkle proof demonstrating membership of the leaf hash.
+    @return bytes32 Computed root of the Merkle tree.
+    """
+    computedHash: bytes32 = _leaf
+
+    index: uint256 = _index
+
+    for proofElement in _proof:
+        if index % 2 == 0:
+            computedHash = keccak256(concat(computedHash, proofElement))
+        else:
+            computedHash = keccak256(concat(proofElement, computedHash))
+        index /= 2
+
+    return computedHash
 
 
 @external
-def newCurrentThing(currentThing: String[128]):
-    self._commit_epoch_balances()
-    self.currentThing = currentThing
-    self.epoch += 1
-    
+@view
+def calc_merkle_root(
+    _leaf: bytes32, _index: uint256, _proof: bytes32[merkle_depth]
+) -> bytes32:
+    """
+    @dev Compute the merkle root
+    @param _leaf Leaf hash to verify.
+    @param _index Position of the leaf hash in the Merkle tree, which starts with 1.
+    @param _proof A Merkle proof demonstrating membership of the leaf hash.
+    @return bytes32 Computed root of the Merkle tree.
+    """
+    return self._calc_merkle_root(_leaf, _index, _proof)
+
+
+@external
+@view
+def verify_merkle_proof(
+    _leaf: bytes32, _index: uint256, _rootHash: bytes32, _proof: bytes32[merkle_depth]
+) -> bool:
+    """
+    @dev Checks that a leaf hash is contained in a root hash.
+    @param _leaf Leaf hash to verify.
+    @param _index Position of the leaf hash in the Merkle tree, which starts with 1.
+    @param _rootHash Root of the Merkle tree.
+    @param _proof A Merkle proof demonstrating membership of the leaf hash.
+    @return bool whether the leaf hash is in the Merkle tree.
+    """
+    return self._calc_merkle_root(_leaf, _index, _proof) == _rootHash
+

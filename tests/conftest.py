@@ -12,13 +12,15 @@ def isolate(fn_isolation):
 
 @pytest.fixture(scope="module")
 def thing(CurrentThing, accounts):
-    return CurrentThing.deploy(18, 1e21, {'from': accounts[0]})
+    thing = CurrentThing.deploy({'from': accounts[0]})
+    thing.test_mint(accounts[0], 10 ** 18)
+    return thing
 
 
 @pytest.fixture(scope="module")
 def npc(NPC, accounts, thing):
     nft = NPC.deploy(thing, {'from': accounts[0]})
-    thing.setNFT(nft, {'from': accounts[0]}) 
+    thing.set_nft_addr(nft, {'from': accounts[0]}) 
     return nft
 
 @pytest.fixture(scope="module")
@@ -27,6 +29,5 @@ def npc_minted(npc, accounts):
     return npc
 
 @pytest.fixture(scope="module")
-def npc_staked(npc_minted, accounts):
-    npc_minted.supportCurrentThing(0, "Current Thing")
-    return npc_minted
+def root():
+    return ""

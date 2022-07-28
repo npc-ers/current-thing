@@ -4,6 +4,37 @@
 # @license MIT
 # Modified from: https://github.com/vyperlang/vyper/blob/de74722bf2d8718cca46902be165f9fe0e3641dd/examples/tokens/ERC721.vy
 
+"""
+         :=+******++=-:                 
+      -+*+======------=+++=:            
+     #+========------------=++=.        
+    #+=======------------------++:      
+   *+=======--------------------:++     
+  =*=======------------------------*.   
+ .%========-------------------------*.  
+ %+=======-------------------------:-#  
++*========--------------------------:#  
+%=========--------------------------:#. 
+%=========--------------------+**=--:++ 
+#+========-----=*#%#=--------#@@@@+-::*:
+:%========-----+@@@@%=-------=@@@@#-::+=
+ -#======-------+@@@%=----=*=--+**=-::#:
+  :#+====---------==----===@%=------::% 
+    #+===-------------======@%=------:=+
+    .%===------------=======+@%------::#
+     #+==-----------=========+@%-------+
+     %===------------*%%%%%%%%@@#-----#.
+     %====-----------============----#: 
+     *+==#+----------+##%%%%%%%%@--=*.  
+     -#==+%=---------=+=========--*=    
+      +===+%+--------------------*-     
+       =====*#=------------------#      
+       .======*#*=------------=*+.      
+         -======+*#*+--------*+         
+          .-========+***+++=-.          
+             .-=======:           
+
+"""
 from vyper.interfaces import ERC165
 from vyper.interfaces import ERC721
 
@@ -58,7 +89,7 @@ NAME: immutable(String[32])
 SYMBOL: immutable(String[32])
 
 defaultURI: public(String[128])
-baseURI: public(String[10])
+baseURI: public(String[128])
 customURI: HashMap[uint256, String[128]]
 contractStemURI: String[128]
 
@@ -85,8 +116,8 @@ def __init__(token_addr: address):
     SYMBOL = "NPC"
     self.token = ThingToken(token_addr)
     self.baseURI = "ipfs://"
-    self.contractStemURI = "QmUKHs5tM2wikjce3EfzbjCBC738pzE5yXr9i29eSMf4R5"
-    self.defaultURI = "QmQ7KYqYMfCtKUKUoVLw6Kane7ZZBZ7pNhffXUeVVyTyH7"
+    self.contractStemURI = "QmTPTu31EEFawxbXEiAaZehLajRAKc7YhxPkTSg31SNVSe"
+    self.defaultURI = "QmPQZadNVNeJ729toJ3ZTjSvC2xhgsQDJuwfSJRN43T2eu"
 
 
 @pure
@@ -342,7 +373,7 @@ def mint(receiver: address) -> bool:
          Throws if `_to` is zero address.
     @return A boolean that indicates if the operation was successful.
     """
-    assert msg.sender == self.minter or msg.sender == self.owner # dev: Only Admin
+#    assert msg.sender == self.minter or msg.sender == self.owner # dev: Only Admin
     assert receiver != empty(address) # dev: Cannot mint to empty address
     assert self.totalMinted < MAX_SUPPLY # dev: Minted must be less than MAX_SUPPLY
 
@@ -435,7 +466,7 @@ def _uint_to_string(_value: uint256) -> String[78]:
 
 @external
 @view
-def tokenURI(tokenId: uint256) -> String[138]:
+def tokenURI(tokenId: uint256) -> String[256]:
     if self.customURI[tokenId] != "":
         return self.customURI[tokenId]
     else:
@@ -444,7 +475,7 @@ def tokenURI(tokenId: uint256) -> String[138]:
 
 @external
 @view
-def contractURI() -> String[138]:
+def contractURI() -> String[256]:
     return concat(self.baseURI, self.contractStemURI)
 
 
@@ -530,18 +561,14 @@ def tokenOfOwnerByIndex(owner: address, index: uint256) -> uint256:
     return 0
 
 @external
-def setThingToken(addr: address):
+def set_thing_token(addr: address):
     assert msg.sender == self.owner
     self.token = ThingToken(addr)
 
-@external
-def supportCurrentThing(tokenId: uint256, currentThing: String[128]):
-    assert self.idToOwner[tokenId] == msg.sender
-	
-    self.staked[self.token.epoch()][tokenId] = True
 
-    # XXX Disable transfer until next Epoch
-    self.currentThing[tokenId] = currentThing
-    self.token.supportCurrentThing(tokenId, msg.sender)
+@external
+def set_baseURI(base_uri: String[128]):
+    assert msg.sender == self.owner
+    self.baseURI = base_uri
 
 
