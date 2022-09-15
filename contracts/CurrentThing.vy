@@ -1,4 +1,4 @@
-# @version 0.3.3
+# @version 0.3.6
 
 """
 @title Current Thing
@@ -42,7 +42,6 @@ from vyper.interfaces import ERC20
 implements: ERC20
 
 
-
 event Approval:
     owner: indexed(address)
     spender: indexed(address)
@@ -54,9 +53,6 @@ event Transfer:
     value: uint256
 
 
-interface NPC:
-    def ownerOf(tokenId: uint256) -> address: view
- 
 
 name: public(String[64])
 symbol: public(String[32])
@@ -66,21 +62,15 @@ totalSupply: public(uint256)
 balances: HashMap[address, uint256]
 allowances: HashMap[address, HashMap[address, uint256]]
 
-npc: public(NPC)
-MAX_NFT_SUPPLY: constant(uint256) = 10000
-owner: address
+npc: public(address)
+owner: public(address)
+minter: public(address)
 
-YEAR: constant(uint256) = 86400 * 365
-EMISSION_RATE: constant(uint256) = 1_000_000 * 10 ** 18 / YEAR
-
-merkle_depth: constant(uint256) = 10
 
 # Epoch
 current_epoch : public(uint256)
 current_thing: public(HashMap[uint256, String[128]]) 
-epoch_merkle_roots: public(HashMap[uint256, bytes32])  # Map epoch to Merkle Root
-epoch_bonus_amounts: public(HashMap[uint256, uint256]) # Map epoch to bonus
-epoch_bonus_claims: public(HashMap[uint256, HashMap[address, bool]])
+
 
 @external
 def __init__():
@@ -88,8 +78,9 @@ def __init__():
     self.symbol = "THING"
     self.decimals = 18
     self.owner = msg.sender
+    self.minter = msg.sender
     self.current_epoch = 0
-    self.current_thing[0] = "First Current Thing"
+    self.current_thing[0] = "Genesis Thing"
 
 
 @view
@@ -174,17 +165,10 @@ def transferFrom(_from : address, _to : address, _value : uint256) -> bool:
     return True
 
 
-@external
-def set_nft_addr(addr: address):
-    assert msg.sender == self.owner
-    self.npc = NPC(addr)
-
 
 @external
-def new_current_thing(current_thing: String[128], bonus_amount: uint256,  merkle_root: bytes32):
-    assert msg.sender == self.owner
-    self.epoch_merkle_roots[self.current_epoch] = merkle_root
-    self.epoch_bonus_amounts[self.current_epoch] = bonus_amount
+def new_current_thing(current_thing: String[128]):
+    assert msg.sender in [self.owner, self.minter]
     self.current_epoch += 1
     self.current_thing[self.current_epoch] = current_thing
 
@@ -196,74 +180,35 @@ def _mint(addr: address, amount: uint256):
    
 
 @external
-def test_mint(addr: address, amount: uint256):
-    self._mint(addr, amount)
+def mint(recipient: address, amount: uint256):
+    assert msg.sender in [self.owner, self.minter]
+    self._mint(recipient, amount)
 
-@external
-def claim_bonus(epoch: uint256, _leaf: bytes32, _index: uint256, _proof: bytes32[merkle_depth]):
-    #assert self._calc_merkle_root(_leaf, _index, _proof) == self.epoch_merkle_roots[epoch]
-    assert self.epoch_bonus_claims[epoch][msg.sender] != True, "Already claimed"
-    assert self.epoch_bonus_amounts[epoch] > 0, "Bonus not set"
-
-    self._mint(msg.sender, self.epoch_bonus_amounts[epoch])
-    self.epoch_bonus_claims[epoch][msg.sender] = True
 
     
-
-# MERKLE FUNCTIONS
-@internal
-@view
-def _calc_merkle_root(
-    _leaf: bytes32, _index: uint256, _proof: bytes32[merkle_depth]
-) -> bytes32:
+@external
+def admin_set_owner(new_owner: address):
     """
-    @dev Compute the merkle root
-    @param _leaf Leaf hash to verify.
-    @param _index Position of the leaf hash in the Merkle tree.
-    @param _proof A Merkle proof demonstrating membership of the leaf hash.
-    @return bytes32 Computed root of the Merkle tree.
+    @notice Update owner of contract
+    @param new_owner New contract owner address
     """
-    computedHash: bytes32 = _leaf
-
-    index: uint256 = _index
-
-    for proofElement in _proof:
-        if index % 2 == 0:
-            computedHash = keccak256(concat(computedHash, proofElement))
-        else:
-            computedHash = keccak256(concat(proofElement, computedHash))
-        index /= 2
-
-    return computedHash
+    assert msg.sender == self.owner  # dev: "Admin Only"
+    self.owner = new_owner
 
 
 @external
-@view
-def calc_merkle_root(
-    _leaf: bytes32, _index: uint256, _proof: bytes32[merkle_depth]
-) -> bytes32:
+def admin_set_minter(new_minter: address):
     """
-    @dev Compute the merkle root
-    @param _leaf Leaf hash to verify.
-    @param _index Position of the leaf hash in the Merkle tree, which starts with 1.
-    @param _proof A Merkle proof demonstrating membership of the leaf hash.
-    @return bytes32 Computed root of the Merkle tree.
+    @notice Update authorized minter address
+    @param new_minter New contract owner address
     """
-    return self._calc_merkle_root(_leaf, _index, _proof)
+    assert msg.sender == self.owner  # dev: "Admin Only"
+    self.minter = new_minter
 
 
 @external
-@view
-def verify_merkle_proof(
-    _leaf: bytes32, _index: uint256, _rootHash: bytes32, _proof: bytes32[merkle_depth]
-) -> bool:
-    """
-    @dev Checks that a leaf hash is contained in a root hash.
-    @param _leaf Leaf hash to verify.
-    @param _index Position of the leaf hash in the Merkle tree, which starts with 1.
-    @param _rootHash Root of the Merkle tree.
-    @param _proof A Merkle proof demonstrating membership of the leaf hash.
-    @return bool whether the leaf hash is in the Merkle tree.
-    """
-    return self._calc_merkle_root(_leaf, _index, _proof) == _rootHash
+def admin_set_npc_addr(addr: address):
+    assert msg.sender == self.owner
+    self.npc = addr
+
 

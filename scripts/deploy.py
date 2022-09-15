@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from brownie import CurrentThing, NPC, accounts, network
+from brownie import CurrentThing, NPC, Indoctrinator, accounts, network
 
 
 def main():
@@ -9,8 +9,14 @@ def main():
     else:
         deployer = accounts[0]
 
-    ver = False
-    thing = CurrentThing.deploy({'from': deployer}, publish_source=ver)
-    nft = NPC.deploy(thing, {'from': deployer}, publish_source=ver)
+    publish_flag = False
+
+    thing = CurrentThing.deploy({'from': deployer}, publish_source=publish_flag)
+
+    nft = NPC.deploy( {'from': deployer}, publish_source=publish_flag)
     thing.set_nft_addr(nft, {"from": deployer})
+
+    minter = Indoctrinator.deploy({'from': deployer}, publish_source=publish_flag)
+    minter.admin_set_nft_addr(nft, {'from': deployer})
+    nft.set_minter(minter, {'from': deployer})
 
