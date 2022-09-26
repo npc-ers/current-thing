@@ -52,43 +52,46 @@ def test_can_update_whitelist(minter, deployer, bob, npc):
 
 
 def test_cannot_reuse_whitelist(minter, deployer, bob, npc):
-    assert minter.mint_price(1, bob) > 0
+    qty = minter.whitelist_max()
+    assert minter.mint_price(qty, bob) > 0
     assert npc.balanceOf(bob) == 0
 
     minter.admin_add_to_whitelist(bob, {"from": deployer})
 
-    minter.mint(1, {"from": bob})
-    assert npc.balanceOf(bob) == 1
-    assert minter.mint_price(1, bob) > 0
+    minter.mint(qty, {"from": bob})
+    assert npc.balanceOf(bob) == qty
+    assert minter.mint_price(qty, bob) > 0
     with brownie.reverts():
         minter.mint(1, {"from": bob})
 
 
 def test_can_add_coupon(minter, deployer, alice, thing, npc):
-    assert minter.mint_price(1, alice) > 0
+    qty = minter.whitelist_max()
+    assert minter.mint_price(qty, alice) > 0
     assert npc.balanceOf(alice) == 0
 
     minter.admin_update_coupon_token(thing, {"from": deployer})
-    minter.admin_mint(alice, 10**18, {"from": deployer})
+    minter.admin_mint_erc20(alice, 10**18, {"from": deployer})
 
-    assert minter.mint_price(1, alice) == 0
-    minter.mint(1, {"from": alice})
+    assert minter.mint_price(qty, alice) == 0
+    minter.mint(qty, {"from": alice})
     assert npc.balanceOf(alice) > 0
 
 
 def test_cannot_reuse_coupon(minter, deployer, alice, thing, npc):
-    assert minter.mint_price(1, alice) > 0
+    qty = minter.whitelist_max()
+    assert minter.mint_price(qty, alice) > 0
     assert npc.balanceOf(alice) == 0
 
     minter.admin_update_coupon_token(thing, {"from": deployer})
-    minter.admin_mint(alice, 10**18, {"from": deployer})
+    minter.admin_mint_erc20(alice, 10**18, {"from": deployer})
 
-    assert minter.mint_price(1, alice) == 0
-    minter.mint(1, {"from": alice})
+    assert minter.mint_price(qty, alice) == 0
+    minter.mint(qty, {"from": alice})
     assert npc.balanceOf(alice) > 0
-    assert minter.mint_price(1, alice) > 0
+    assert minter.mint_price(qty, alice) > 0
     with brownie.reverts():
-        minter.mint(1, {"from": alice})
+        minter.mint(qty, {"from": alice})
 
 
 def test_can_update_owner(minter, deployer, bob):
@@ -172,3 +175,12 @@ def test_mint_at_limit(minter, alice):
 
     with brownie.reverts():
         minter.mint(10, {"from": alice, "value": minter.mint_price(10, alice)})
+
+
+#def test_mint_3
+#
+#def test_cannot_mint_over3
+#
+#def test_can_change_mint_cap
+#
+#def test_can_disable_coin_on-Mint

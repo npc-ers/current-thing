@@ -6,8 +6,7 @@ from brownie import a
 def test_admin_can_set_new_current_thing(thing, root):
     new_thing = "New Current Thing"
     thing.new_current_thing(new_thing, {"from": a[0]})
-    epoch = thing.current_epoch()
-    assert thing.current_thing(thing.current_epoch()) == new_thing
+    assert thing.current_thing() == new_thing
 
 
 def test_admin_can_advance_epoch(thing, root):

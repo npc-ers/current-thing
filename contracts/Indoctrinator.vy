@@ -1,5 +1,5 @@
 # @version 0.3.6
-# @dev Implementation of ERC-721 non-fungible token standard.
+# @notice NPC-ers Minter
 # @author npc-ers.eth
 # @license MIT
 # Modified from: https://github.com/vyperlang/vyper/blob/de74722bf2d8718cca46902be165f9fe0e3641dd/examples/tokens/ERC721.vy
@@ -57,7 +57,11 @@ min_price: public(uint256)
 # Coupon!
 coupon_token: public(address)
 whitelist: public(HashMap[address, bool])
-used_coupon: public(HashMap[address, bool])
+used_coupon: public(HashMap[address, uint256])
+whitelist_max: public(uint256)
+is_erc20_drop_live: public(bool)
+erc20_drop_quantity: public(uint256)
+
 MAX_MINT: constant(uint256) = 4000
 BATCH_LIMIT: constant(uint256) = 10
 
@@ -66,19 +70,21 @@ BATCH_LIMIT: constant(uint256) = 10
 def __init__():
     self.owner = msg.sender
     self.min_price = as_wei_value(.008, 'ether') 
+    self.whitelist_max = 3
+    self.erc20_drop_quantity = 1000 * 10 ** 18
+    self.is_erc20_drop_live = True
+    
 
 
 @internal
 @view
 def _has_coupon(addr: address) -> bool:
     has_coupon: bool = False
-    if self.used_coupon[addr] == True:
+    if self.used_coupon[addr] >= self.whitelist_max:
         has_coupon = False
     elif self.whitelist[addr] == True:
         has_coupon = True
     elif self.coupon_token == empty(address):
-        has_coupon = False
-    elif self.used_coupon[addr]:
         has_coupon = False
     elif ERC20(self.coupon_token).balanceOf(addr) > 0:
         has_coupon = True
@@ -102,7 +108,8 @@ def has_coupon(addr: address) -> bool:
 @view
 def _mint_price(quantity: uint256, addr: address) -> uint256:
     if self._has_coupon(addr):
-        return self.min_price * (quantity - 1)
+        mints_left: uint256 = self.whitelist_max - self.used_coupon[addr]
+        return self.min_price * (quantity - min(quantity, mints_left ))
     else:
         return self.min_price * quantity
 
@@ -129,10 +136,11 @@ def mint(quantity: uint256):
             break
         
         ERC721(self.nft_addr).mint(msg.sender)
-        ThingToken(self.token_addr).mint(msg.sender, 1000 * 10 ** 18)
+        if self.is_erc20_drop_live:
+            ThingToken(self.token_addr).mint(msg.sender, self.erc20_drop_quantity)
 
     if self._has_coupon(msg.sender):
-        self.used_coupon[msg.sender] = True
+        self.used_coupon[msg.sender] += min(quantity, self.whitelist_max - self.used_coupon[msg.sender])
 
 @external
 def admin_set_nft_addr(addr: address):
@@ -192,7 +200,33 @@ def admin_add_to_whitelist(addr: address):
     self.whitelist[addr] = True
 
 
+
 @external
-def admin_mint(addr: address, quantity: uint256):
+def admin_mint_erc20(addr: address, quantity: uint256):
     assert self.owner == msg.sender
     ThingToken(self.token_addr).mint(addr, quantity)
+
+
+@external
+def admin_mint_nft(addr: address):
+    assert self.owner == msg.sender
+    ERC721(self.nft_addr).mint(addr)
+
+
+@external
+def admin_update_whitelist_max(max_val: uint256):
+    assert self.owner == msg.sender
+    self.whitelist_max = max_val 
+
+
+@external
+def admin_update_erc20_drop_live(status: bool):
+    assert self.owner == msg.sender
+    self.is_erc20_drop_live = status
+
+
+@external
+def admin_update_erc20_drop_quantity(quantity: uint256):
+    assert self.owner == msg.sender
+    self.erc20_drop_quantity = quantity
+

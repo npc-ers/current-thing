@@ -1,4 +1,5 @@
 # @version 0.3.6
+# @notice NPC-ers NFT
 # @dev Implementation of ERC-721 non-fungible token standard.
 # @author npcers.eth
 # @license MIT
@@ -139,7 +140,7 @@ def __init__():
     self.minter = msg.sender
     
     self.base_uri = (
-        "ipfs://bafybeicrbcbmxaeluzapoczl3tt3a23hj6crx3lzgvcilbccjzs2srhksy/"
+        "ipfs://bafybeihenlt6iw25kd6abtonqm5m6dctgeaxoftdhtcyubthvln4y6hezi/"
     )
     self.contract_uri = (
         "ipfs://QmTPTu31EEFawxbXEiAaZehLajRAKc7YhxPkTSg31SNVSe"

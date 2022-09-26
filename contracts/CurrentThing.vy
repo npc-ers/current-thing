@@ -2,6 +2,7 @@
 
 """
 @title Current Thing
+@author npcers.eth
 @notice Based on the ERC-20 token standard as defined at
         https://eips.ethereum.org/EIPS/eip-20
 
@@ -69,7 +70,7 @@ minter: public(address)
 
 # Epoch
 current_epoch : public(uint256)
-current_thing: public(HashMap[uint256, String[128]]) 
+current_thing_archive: public(HashMap[uint256, String[128]]) 
 
 
 @external
@@ -80,7 +81,7 @@ def __init__():
     self.owner = msg.sender
     self.minter = msg.sender
     self.current_epoch = 0
-    self.current_thing[0] = "Genesis Thing"
+    self.current_thing_archive[0] = "Genesis Thing"
 
 
 @view
@@ -165,12 +166,17 @@ def transferFrom(_from : address, _to : address, _value : uint256) -> bool:
     return True
 
 
+@external
+@view
+def current_thing() -> String[150]:
+    return self.current_thing_archive[self.current_epoch]
+
 
 @external
 def new_current_thing(current_thing: String[128]):
     assert msg.sender in [self.owner, self.minter]
     self.current_epoch += 1
-    self.current_thing[self.current_epoch] = current_thing
+    self.current_thing_archive[self.current_epoch] = current_thing
 
 
 @internal
