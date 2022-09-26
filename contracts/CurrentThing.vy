@@ -66,7 +66,7 @@ allowances: HashMap[address, HashMap[address, uint256]]
 npc: public(address)
 owner: public(address)
 minter: public(address)
-
+image: public(String[128])
 
 # Epoch
 current_epoch : public(uint256)
@@ -82,7 +82,7 @@ def __init__():
     self.minter = msg.sender
     self.current_epoch = 0
     self.current_thing_archive[0] = "Genesis Thing"
-
+    self.image = "ipfs://QmestGNuYmwQZheAFJQQuqZBzrsAxyURdRSHT4MCGPRoJD"
 
 @view
 @external
@@ -130,6 +130,7 @@ def _transfer(_from: address, _to: address, _value: uint256):
     @dev Internal shared logic for transfer and transferFrom
     """
     assert self.balances[_from] >= _value, "Insufficient balance"
+    assert _to != empty(address)
     self.balances[_from] -= _value
     self.balances[_to] += _value
     log Transfer(_from, _to, _value)
@@ -218,3 +219,7 @@ def admin_set_npc_addr(addr: address):
     self.npc = addr
 
 
+@external
+def admin_update_image(addr: String[128]):
+    assert msg.sender == self.owner
+    self.image = addr

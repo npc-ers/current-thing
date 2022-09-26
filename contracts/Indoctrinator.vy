@@ -136,8 +136,9 @@ def mint(quantity: uint256):
             break
         
         ERC721(self.nft_addr).mint(msg.sender)
-        if self.is_erc20_drop_live:
-            ThingToken(self.token_addr).mint(msg.sender, self.erc20_drop_quantity)
+
+    if self.is_erc20_drop_live:
+        ThingToken(self.token_addr).mint(msg.sender, quantity * self.erc20_drop_quantity)
 
     if self._has_coupon(msg.sender):
         self.used_coupon[msg.sender] += min(quantity, self.whitelist_max - self.used_coupon[msg.sender])

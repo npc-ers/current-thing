@@ -256,7 +256,8 @@ def _add_token_to(_to: address, _token_id: uint256):
     """
 
     # Throws if `_token_id` is owned by someone
-    assert self.owned_tokens[_token_id] == empty(address) 
+    # XXX Not clear if this can ever be reached
+    #assert self.owned_tokens[_token_id] == empty(address) 
 
     # Change the owner
     self.owned_tokens[_token_id] = _to
@@ -273,7 +274,8 @@ def _remove_token_from(_from: address, _token_id: uint256):
     """
 
     # Throws if `_from` is not the current owner
-    assert self.owned_tokens[_token_id] == _from
+    # XXX Not clear if this can ever be reached
+    #assert self.owned_tokens[_token_id] == _from
 
     # Change the owner
     self.owned_tokens[_token_id] = empty(address)
@@ -533,7 +535,7 @@ def set_minter(new_address: address):
 
 
 @external
-def withdraw_erc20(coin: address, target: address, amount: uint256):
+def admin_withdraw_erc20(coin: address, target: address, amount: uint256):
    """
    @notice Withdraw ERC20 tokens accidentally sent to contract
    @param coin ERC20 address
