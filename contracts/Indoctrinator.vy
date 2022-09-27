@@ -2,7 +2,6 @@
 # @notice NPC-ers Minter
 # @author npc-ers.eth
 # @license MIT
-# Modified from: https://github.com/vyperlang/vyper/blob/de74722bf2d8718cca46902be165f9fe0e3641dd/examples/tokens/ERC721.vy
 
 """
          :=+******++=-:                 

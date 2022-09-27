@@ -170,3 +170,11 @@ def test_dropping_mint_cap_hits_prior_minters(minter, bob, deployer, npc):
     assert minter.mint_price(1, bob) > 0
     with brownie.reverts():
         minter.mint(1, {"from": bob})
+
+def test_cannot_mint_to_null_addr(minter, deployer, npc):
+    curr_tot = npc.totalSupply()
+    with brownie.reverts():
+        minter.admin_mint_nft(ZERO_ADDRESS, {'from': deployer})
+    assert npc.totalSupply() == curr_tot
+
+

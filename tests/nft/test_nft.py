@@ -316,7 +316,6 @@ def test_safe_transfer_from_not_authorized(token, alice, bob, charlie):
 #
 # Test a valid safe transfer to a contract returning the proper magic value
 #
-@pytest.mark.skip
 def test_safe_transfer_from(token, token_receiver):
     data = "0x1234"
     me = accounts[0]
