@@ -1,6 +1,6 @@
-# @version 0.3.6
+# @version 0.3.7
 # @notice NPC-ers Minter
-# @author npc-ers.eth
+# @author npcers.eth
 # @license MIT
 
 """
@@ -45,7 +45,7 @@ interface ERC721:
 interface ThingToken:
     def mint(recipient: address, amount: uint256): nonpayable
 
-
+# Addresses
 owner: public(address)
 nft_addr: public(address)
 token_addr: public(address)
@@ -58,10 +58,13 @@ coupon_token: public(address)
 whitelist: public(HashMap[address, bool])
 used_coupon: public(HashMap[address, uint256])
 whitelist_max: public(uint256)
+
+# Airdrop!
 is_erc20_drop_live: public(bool)
 erc20_drop_quantity: public(uint256)
 
-MAX_MINT: constant(uint256) = 4000
+# Constants
+MAX_MINT: constant(uint256) = 10000
 BATCH_LIMIT: constant(uint256) = 10
 
 
@@ -72,7 +75,6 @@ def __init__():
     self.whitelist_max = 3
     self.erc20_drop_quantity = 1000 * 10 ** 18
     self.is_erc20_drop_live = True
-    
 
 
 @internal
@@ -95,12 +97,11 @@ def _has_coupon(addr: address) -> bool:
 @view
 def has_coupon(addr: address) -> bool:
     """
-    @notice Check if the user is authorized for one free mint
+    @notice Check if the user is authorized for free mints
     @param addr Address to check eligibility
-    @return bool True if eligible for one free mint
+    @return bool True if eligible
     """
     return self._has_coupon(addr)
-
 
 
 @internal
@@ -108,20 +109,27 @@ def has_coupon(addr: address) -> bool:
 def _mint_price(quantity: uint256, addr: address) -> uint256:
     if self._has_coupon(addr):
         mints_left: uint256 = self.whitelist_max - self.used_coupon[addr]
-        return self.min_price * (quantity - min(quantity, mints_left ))
+        return self.min_price * (quantity - min(quantity, mints_left))
     else:
         return self.min_price * quantity
+
 
 @external
 @view
 def mint_price(quantity: uint256, addr: address) -> uint256:
+    """
+    @notice Calculate price of minting a quantity of NFTs for a specific address
+    @param quantity Number of NFTs to mint
+    @param addr Address to mint for
+    """
     return self._mint_price(quantity, addr)
+
 
 @external
 @payable
 def mint(quantity: uint256):
     """
-    @notice Reserve a batch of several NFTs at one time
+    @notice Mint up to MAX_MINT NFTs at a time.  Also supplies $THING if drop is live.
     @param quantity The number of NFTs to mint
     """
     assert quantity <= BATCH_LIMIT  #dev: Mint batch capped
@@ -142,24 +150,27 @@ def mint(quantity: uint256):
     if self._has_coupon(msg.sender):
         self.used_coupon[msg.sender] += min(quantity, self.whitelist_max - self.used_coupon[msg.sender])
 
+
 @external
 def admin_set_nft_addr(addr: address):
     """
-    @notice Update NFT Address
+    @notice Update NFT address
     @param addr New contract address
     """
     assert msg.sender == self.owner
     self.nft_addr = addr
-    
+
+
 @external
 def admin_set_token_addr(addr: address):
     """
-    @notice Update Token Address
+    @notice Update address of ERC-20 token
     @param addr New contract address
     """
     assert msg.sender == self.owner
     self.token_addr = addr
- 
+
+
 @external
 def admin_new_owner(new_owner: address):
     """
@@ -174,7 +185,6 @@ def admin_new_owner(new_owner: address):
 def admin_withdraw(target: address, amount: uint256):
     """
     @notice Withdraw funds to admin
-    @dev Can only be used if auctions have been disabled
     """
     assert self.owner == msg.sender  # dev: "Admin Only"
 
@@ -184,7 +194,7 @@ def admin_withdraw(target: address, amount: uint256):
 @external
 def admin_update_coupon_token(token: address):
     """
-    @notice Holders of any ERC20 coupon token are eligible for one free random mint
+    @notice Holders of any ERC20 coupon token are eligible for free mint
     @param token Address of ERC20 token
     """
     assert self.owner == msg.sender  # dev: "Admin Only"
@@ -194,39 +204,77 @@ def admin_update_coupon_token(token: address):
 @external
 def admin_add_to_whitelist(addr: address):
     """
-    @notice Whitelist a specific address for one free mint
+    @notice Whitelist a specific address for free mints i
+    @dev defined by whitelist_max
+    @param addr Address to add to whitelist
     """
     assert self.owner == msg.sender  # dev: "Admin Only"
     self.whitelist[addr] = True
 
 
-
 @external
 def admin_mint_erc20(addr: address, quantity: uint256):
+    """
+    @notice Mint $THING tokens to a specific address
+    @param addr Address to mint ERC20 for
+    @param quantity Number of tokens to mint
+    """
+
     assert self.owner == msg.sender
     ThingToken(self.token_addr).mint(addr, quantity)
 
 
 @external
 def admin_mint_nft(addr: address):
+    """
+    @notice Mint an NFT to a specific address
+    @param addr Address to mint to
+    """
+
     assert self.owner == msg.sender
     ERC721(self.nft_addr).mint(addr)
 
 
 @external
 def admin_update_whitelist_max(max_val: uint256):
+    """
+    @notice Update number of free mints whitelisted useres get 
+    @param max_val New value for whitelist cap
+    """
+
     assert self.owner == msg.sender
     self.whitelist_max = max_val 
 
 
 @external
 def admin_update_erc20_drop_live(status: bool):
+    """
+    @notice Update if $THING tokens also distributed on mint
+    @param status Boolean True for token distribution, False for no
+    """
+
     assert self.owner == msg.sender
     self.is_erc20_drop_live = status
 
 
 @external
 def admin_update_erc20_drop_quantity(quantity: uint256):
+    """
+    @notice Update quantity of tokens disbursed on mint 
+    @param quantity New number of tokens
+    """
+
     assert self.owner == msg.sender
     self.erc20_drop_quantity = quantity
+
+
+@external
+def admin_update_mint_price(new_value: uint256):
+    """
+    @notice Update mint price
+    @param new_value New mint price 
+    """
+
+    assert self.owner == msg.sender
+    self.min_price = new_value
 

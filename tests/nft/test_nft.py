@@ -235,8 +235,6 @@ def test_transfer_from_not_authorized(token, alice, bob, charlie):
 #
 # Test a valid safe transfer, initiated by the current owner of the token
 #
-
-
 def test_safe_transfer_from_current_owner(token, alice, bob):
     token_id = 1
     _ensureToken(token, token_id, alice)
@@ -316,7 +314,8 @@ def test_safe_transfer_from_not_authorized(token, alice, bob, charlie):
 #
 # Test a valid safe transfer to a contract returning the proper magic value
 #
-def test_safe_transfer_from(token, token_receiver):
+def test_safe_transfer_from(token, tokenReceiver):
+    token_receiver = tokenReceiver
     data = "0x1234"
     me = accounts[0]
     token_id = 1
@@ -352,7 +351,6 @@ def test_safe_transfer_from(token, token_receiver):
 #
 # Test a valid safe transfer to a contract returning the wrong proper magic value
 #
-@pytest.mark.skip
 def test_safeTransferFrom_wrongMagicValue(token, tokenReceiver):
     me = accounts[0]
     tokenID = 1
@@ -371,7 +369,6 @@ def test_safeTransferFrom_wrongMagicValue(token, tokenReceiver):
 #
 # Test a valid safe transfer to a contract returning the proper magic value - no data
 #
-@pytest.mark.skip
 def test_safeTransferFrom_noData(token, tokenReceiver):
     me = accounts[0]
     tokenID = 1
@@ -519,6 +516,11 @@ def test_setGetOperator(token):
     # Check
     assert False == token.isApprovedForAll(me, bob)
     assert False == token.isApprovedForAll(me, alice)
+
+
+def test_only_approval_not_on_my_tokens(token, alice):
+    with brownie.reverts():
+        token.setApprovalForAll(alice, True, {"from": alice})
 
 
 #

@@ -32,16 +32,6 @@ def test_minter_can_mint(thing, deployer, alice, bob):
     assert thing.balanceOf(alice) == 10**18
 
 
-def test_admin_can_update_image(thing, deployer):
-    thing.admin_update_image("Test", {"from": deployer})
-    assert thing.image() == "Test"
-
-
-def test_rando_cannot_update_image(thing, alice):
-    with brownie.reverts():
-        thing.admin_update_image("Test", {"from": alice})
-
-
 def test_rando_cannot_mint(thing, alice, bob):
     with brownie.reverts():
         thing.mint(alice, 10**18, {"from": bob})

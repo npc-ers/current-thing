@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
 import pytest
-from brownie import NPC, CurrentThing, Indoctrinator, accounts
+from brownie import (NPC, CurrentThing, ERC721TokenReceiverImplementation,
+                     Indoctrinator, accounts)
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -73,16 +74,30 @@ def minted_token_id():
 
 
 @pytest.fixture(scope="module")
-def minter(npc, deployer, thing):
-    i = Indoctrinator.deploy({"from": deployer})
-    i.admin_set_nft_addr(npc, {"from": deployer})
-    npc.set_minter(i, {"from": deployer})
+def premint():
+    return 50
 
-    thing.admin_set_minter(i, {"from": deployer})
-    i.admin_set_token_addr(thing, {"from": deployer})
-    return i
+
+@pytest.fixture(scope="module")
+def minter(npc, deployer, thing, premint):
+    minter = Indoctrinator.deploy({"from": deployer})
+    minter.admin_set_nft_addr(npc, {"from": deployer})
+    npc.set_minter(minter, {"from": deployer})
+
+    thing.admin_set_minter(minter, {"from": deployer})
+    minter.admin_set_token_addr(thing, {"from": deployer})
+
+    # Premint
+    for i in range(premint):
+        minter.admin_mint_nft(deployer, {"from": deployer})
+    return minter
 
 
 @pytest.fixture(scope="module")
 def token_metadata():
     return {"name": "NPC-ers", "symbol": "NPC"}
+
+
+@pytest.fixture(scope="module")
+def tokenReceiver(deployer):
+    return ERC721TokenReceiverImplementation.deploy({"from": deployer})

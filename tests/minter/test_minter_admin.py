@@ -29,7 +29,14 @@ def test_admin_can_mint_nft(minter, alice, npc, deployer):
     assert npc.balanceOf(alice) == 1
 
 
-def test_admin_cannot_update_whitelist(minter, alice):
+def test_admin_can_update_mint_price(minter, alice, deployer):
+    new_price = 10**18
+    assert minter.mint_price(1, alice) != new_price
+    minter.admin_update_mint_price(new_price, {"from": deployer})
+    assert minter.mint_price(1, alice) == new_price
+
+
+def test_rando_cannot_update_whitelist(minter, alice):
     with brownie.reverts():
         minter.admin_update_whitelist_max(0, {"from": alice})
 
@@ -70,3 +77,8 @@ def test_rando_cannot_withdraw(minter, alice):
 def test_rando_cannot_set_token_addr(minter, alice):
     with brownie.reverts():
         minter.admin_set_token_addr(ZERO_ADDRESS, {"from": alice})
+
+
+def test_rando_cannot_set_mint_price(minter, alice):
+    with brownie.reverts():
+        minter.admin_update_mint_price(0, {"from": alice})

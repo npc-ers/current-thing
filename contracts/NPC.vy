@@ -1,4 +1,4 @@
-# @version 0.3.6
+# @version 0.3.7
 # @notice NPC-ers NFT
 # @dev Implementation of ERC-721 non-fungible token standard.
 # @author npcers.eth
@@ -51,7 +51,7 @@ interface ERC721Receiver:
             sender: address,
             tokenId: uint256,
             data: Bytes[1024]
-        ) -> bytes4: view
+        ) -> bytes4: nonpayable
 
 
 # @dev Emits when ownership of any NFT changes by any mechanism. 
@@ -107,7 +107,8 @@ base_uri: public(String[128])
 contract_uri: String[128]
 
 # NFT Data
-token_log: DynArray[uint256, 4000]
+token_by_owner: HashMap[address, HashMap[uint256, uint256]]
+token_count: uint256
 
 owned_tokens: HashMap[uint256, address]                       # @dev NFT ID to the address that owns it.
 token_approvals: HashMap[uint256, address]                    # @dev NFT ID to approved address.
@@ -115,24 +116,21 @@ operator_approvals: HashMap[address, HashMap[address, bool]]  # @dev Owner addre
 balances: HashMap[address, uint256]                           # @dev Owner address to token count.
 
 # @dev Static list of supported ERC165 interface ids
-SUPPORTED_INTERFACES: constant(bytes4[6]) = [
+SUPPORTED_INTERFACES: constant(bytes4[5]) = [
     0x01FFC9A7,  # ERC165
     0x80AC58CD,  # ERC721
     0x150B7A02,  # ERC721TokenReceiver
-    0x5B5E166F,  # ERC721Metadata
     0x780E9D63,  # ERC721Enumerable
-    0x5B5E139F,  # ERC721Enumerable
+    0x5B5E139F,  # ERC721Metadata
 ]
 
 # Custom NPC 
-revealed : public(bool)
+revealed: public(bool)
 default_uri: public(String[150])
+
 
 @external
 def __init__():
-    """
-    @dev Contract constructor.
-    """
     self.symbol = "NPC"
     self.name = "NPC-ers"
 
@@ -148,6 +146,7 @@ def __init__():
 
     self.default_uri = "ipfs://QmPQZadNVNeJ729toJ3ZTjSvC2xhgsQDJuwfSJRN43T2eu"
     self.revealed = False
+
 
 @pure
 @external
@@ -167,18 +166,18 @@ def supportsInterface(interface_id: bytes4) -> bool:
 
 @view
 @external
-def balanceOf(_owner: address) -> uint256:
+def balanceOf(owner: address) -> uint256:
     """
     @notice Count all NFTs assigned to an owner.
-    @dev Returns the number of NFTs owned by `_owner`.
-         Throws if `_owner` is the zero address. 
+    @dev Returns the number of NFTs owned by `owner`.
+         Throws if `owner` is the zero address. 
          NFTs assigned to the zero address are considered invalid.
-    @param _owner Address for whom to query the balance.
+    @param owner Address for whom to query the balance.
     @return The address of the owner of the NFT
     """
 
-    assert _owner != empty(address) # dev: "ERC721: balance query for the zero address"
-    return self.balances[_owner]
+    assert owner != empty(address) # dev: "ERC721: balance query for the zero address"
+    return self.balances[owner]
 
 
 @view
@@ -256,26 +255,25 @@ def _add_token_to(_to: address, _token_id: uint256):
     """
 
     # Throws if `_token_id` is owned by someone
-    # XXX Not clear if this can ever be reached
-    #assert self.owned_tokens[_token_id] == empty(address) 
+    assert self.owned_tokens[_token_id] == empty(address) 
 
     # Change the owner
     self.owned_tokens[_token_id] = _to
 
     # Change count tracking
+    self.token_by_owner[_to][self.balances[_to]] = _token_id
     self.balances[_to] += 1
 
 
 @internal
 def _remove_token_from(_from: address, _token_id: uint256):
     """
-    @dev Remove a NFT from a given address
+    @dev Remove an NFT from a given address
          Throws if `_from` is not the current owner.
     """
 
     # Throws if `_from` is not the current owner
-    # XXX Not clear if this can ever be reached
-    #assert self.owned_tokens[_token_id] == _from
+    assert self.owned_tokens[_token_id] == _from
 
     # Change the owner
     self.owned_tokens[_token_id] = empty(address)
@@ -332,95 +330,95 @@ def _transfer_from(_from: address, _to: address, _token_id: uint256, _sender: ad
 
 
 @external
-def transferFrom(_from: address, _to: address, _tokenId: uint256):
+def transferFrom(from_addr: address, to_addr: address, token_id: uint256):
     """
-    @dev Throws unless `msg.sender` is the current owner, an authorized operator, or the approved address for this NFT.
-         Throws if `_from` is not the current owner.
-         Throws if `_to` is the zero address.
-         Throws if `_tokenId` is not a valid NFT.
-    @notice The caller is responsible to confirm that `_to` is capable of receiving NFTs or else they maybe be permanently lost.
-    @param _from The current owner of the NFT.
-    @param _to The new owner.
-    @param _tokenId The NFT to transfer.
+    @dev Throws unless `msg.sender` is the current owner, an authorized operato_addrr, or the approved address for this NFT.
+         Throws if `from_addr` is not the current owner.
+         Throws if `to_addr` is the zero address.
+         Throws if `token_id` is not a valid NFT.
+    @notice The caller is responsible to_addr confirm that `to_addr` is capable of receiving NFTs or else they maybe be permanently lost.
+    @param from_addr The current owner of the NFT.
+    @param to_addr The new owner.
+    @param token_id The NFT to_addr transfer.
     """
 
-    self._transfer_from(_from, _to, _tokenId, msg.sender)
+    self._transfer_from(from_addr, to_addr, token_id, msg.sender)
 
 
 @external
 def safeTransferFrom(
-    _from: address, _to: address, _tokenId: uint256, _data: Bytes[1024] = b""
+    from_addr: address, to_addr: address, token_id: uint256, data: Bytes[1024] = b""
 ):
     """
     @dev Transfers the ownership of an NFT from one address to another address.
          Throws unless `msg.sender` is the current owner, an authorized operator, or the approved address for this NFT.
-         Throws if `_from` is not the current owner.
-         Throws if `_to` is the zero address.
-         Throws if `_tokenId` is not a valid NFT.
-         If `_to` is a smart contract, it calls `onERC721Received` on `_to` and throws if the return value is not `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`.
+         Throws if `from_addr` is not the current owner.
+         Throws if `to_addr` is the zero address.
+         Throws if `token_id` is not a valid NFT.
+         If `to_addr` is a smart contract, it calls `onERC721Received` on `to_addr` and throws if the return value is not `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`.
          NOTE: bytes4 is represented by bytes32 with padding
-    @param _from The current owner of the NFT.
-    @param _to The new owner.
-    @param _tokenId The NFT to transfer.
-    @param _data Additional data with no specified format, sent in call to `_to`.
+    @param from_addr The current owner of the NFT.
+    @param to_addr The new owner.
+    @param token_id The NFT to transfer.
+    @param data Additional data with no specified format, sent in call to `to_addr`.
     """
 
-    self._transfer_from(_from, _to, _tokenId, msg.sender)
+    self._transfer_from(from_addr, to_addr, token_id, msg.sender)
 
-    if _to.is_contract:  # check if `_to` is a contract address
-        return_value: bytes4 = ERC721Receiver(_to).onERC721Received(msg.sender, _from, _tokenId, _data)
+    if to_addr.is_contract:  # check if `to_addr` is a contract address
+        return_value: bytes4 = ERC721Receiver(to_addr).onERC721Received(msg.sender, from_addr, token_id, data)
 
         # Throws if transfer destination is a contract which does not implement 'onERC721Received'
         assert return_value == method_id("onERC721Received(address,address,uint256,bytes)", output_type=bytes4)
 
 
 @external
-def approve(_approved: address, _tokenId: uint256):
+def approve(approved: address, token_id: uint256):
     """
     @notice Change or reaffirm the approved address for an NFT
     @dev Set or reaffirm the approved address for an NFT. The zero address indicates there is no approved address.
          Throws unless `msg.sender` is the current NFT owner, or an authorized operator of the current owner.
-         Throws if `_tokenId` is not a valid NFT. (NOTE: This is not written the EIP)
-         Throws if `_approved` is the current owner. (NOTE: This is not written the EIP)
-    @param _approved Address to be approved for the given NFT ID.
-    @param _tokenId ID of the token to be approved.
+         Throws if `token_id` is not a valid NFT. (NOTE: This is not written the EIP)
+         Throws if `approved` is the current owner. (NOTE: This is not written the EIP)
+    @param approved Address to be approved for the given NFT ID.
+    @param token_id ID of the token to be approved.
     """
 
-    owner: address = self.owned_tokens[_tokenId]
+    owner: address = self.owned_tokens[token_id]
 
-    # Throws if `_tokenId` is not a valid NFT
+    # Throws if `token_id` is not a valid NFT
     assert owner != empty(address) # dev: "ERC721: owner query for nonexistent token"
 
-    # Throws if `_approved` is the current owner
-    assert _approved != owner # dev: "ERC721: approval to current owner"
+    # Throws if `approved` is the current owner
+    assert approved != owner # dev: "ERC721: approval to current owner"
 
     # Check requirements
-    is_owner: bool = self.owned_tokens[_tokenId] == msg.sender
+    is_owner: bool = self.owned_tokens[token_id] == msg.sender
     is_approved_all: bool = (self.operator_approvals[owner])[msg.sender]
     assert is_owner or is_approved_all # dev: "ERC721: approve caller is not owner nor approved for all"
 
     # Set the approval
-    self.token_approvals[_tokenId] = _approved
+    self.token_approvals[token_id] = approved
 
-    log Approval(owner, _approved, _tokenId)
+    log Approval(owner, approved, token_id)
 
 
 @external
-def setApprovalForAll(_operator: address, _approved: bool):
+def setApprovalForAll(operator: address, approved: bool):
     """
     @notice notice Enable or disable approval for a third party ("operator") to manage all of `msg.sender`'s assets
     @dev Enables or disables approval for a third party ("operator") to manage all of`msg.sender`'s assets. It also emits the ApprovalForAll event.
-         Throws if `_operator` is the `msg.sender`. (NOTE: This is not written the EIP)
+         Throws if `operator` is the `msg.sender`. (NOTE: This is not written the EIP)
     This works even if sender doesn't own any tokens at the time.
-    @param _operator Address to add to the set of authorized operators.
-    @param _approved True if the operators is approved, false to revoke approval.
+    @param operator Address to add to the set of authorized operators.
+    @param approved True if the operators is approved, false to revoke approval.
     """
 
-    # Throws if `_operator` is the `msg.sender`
-    assert _operator != msg.sender
-    self.operator_approvals[msg.sender][_operator] = _approved
+    # Throws if `operator` is the `msg.sender`
+    assert operator != msg.sender
+    self.operator_approvals[msg.sender][operator] = approved
 
-    log ApprovalForAll(msg.sender, _operator, _approved)
+    log ApprovalForAll(msg.sender, operator, approved)
 
 
 ### MINT FUNCTIONS ###
@@ -440,11 +438,11 @@ def mint(receiver: address):
     assert receiver != empty(address) # dev: Cannot mint to empty address
 
     # Add NFT. Throws if `_token_id` is owned by someone
-    token_id: uint256 = len(self.token_log)
+    token_id: uint256 = self.token_count 
     self._add_token_to(receiver, token_id)
-    self.token_log.append(token_id)
-    log Transfer(empty(address), receiver, token_id)
+    self.token_count += 1
 
+    log Transfer(empty(address), receiver, token_id)
 
 
 ### ERC721-URI STORAGE FUNCTIONS ###
@@ -455,7 +453,7 @@ def mint(receiver: address):
 def tokenURI(token_id: uint256) -> String[256]:
     """
     @notice A distinct Uniform Resource Identifier (URI) for a given asset.
-    @dev Throws if `_tokenId` is not a valid NFT. URIs are defined in RFC 6686. The URI may point to a JSON file that conforms to the "ERC721 Metadata JSON Schema".
+    @dev Throws if `_token_id` is not a valid NFT. URIs are defined in RFC 6686. The URI may point to a JSON file that conforms to the "ERC721 Metadata JSON Schema".
     """
     if self.owned_tokens[token_id] == empty(address):
         raise # dev: "ERC721URIStorage: URI query for nonexistent token"
@@ -471,18 +469,19 @@ def tokenURI(token_id: uint256) -> String[256]:
 def contractURI() -> String[128]:
     """
     @notice URI for contract level metadata
+    @return Contract URI
     """
     return self.contract_uri
 
 
-
 ### ADMIN FUNCTIONS
+
 
 @external
 def set_base_uri(base_uri: String[128]):
     """
     @notice Admin function to set a new Base URI for
-    @dev Globally prepended to token_uri and contract_uri
+    @dev Globally prepended to token_uri
     @param base_uri New URI for the token
 
     """
@@ -494,7 +493,6 @@ def set_base_uri(base_uri: String[128]):
 def set_contract_uri(new_uri: String[66]):
     """
     @notice Admin function to set a new contract URI
-    @dev Appended to base_uri
     @param new_uri New URI for the contract
     """
 
@@ -516,11 +514,12 @@ def set_owner(new_addr: address):
 @external 
 def set_revealed(flag: bool):
     """
-    @notice Admin function to reveal collection
-    @param flag Boolean
+    @notice Admin function to reveal collection.  If not revealed, all NFTs show default_uri
+    @param flag Boolean, True to reveal, False to conceal
     """
     assert msg.sender in [self.owner, self.minter]
     self.revealed = flag
+
 
 @external
 def set_minter(new_address: address):
@@ -546,7 +545,6 @@ def admin_withdraw_erc20(coin: address, target: address, amount: uint256):
    ERC20(coin).transfer(target, amount)
 
 
-
 ## ERC-721 Enumerable Functions
 
 
@@ -558,7 +556,7 @@ def totalSupply() -> uint256:
     @dev Throws if `_index` >= `totalSupply()`.
     @return The token identifier for the `_index`th NFT
     """
-    return len(self.token_log)
+    return self.token_count
 
 
 @external
@@ -566,36 +564,25 @@ def totalSupply() -> uint256:
 def tokenByIndex(_index: uint256) -> uint256:
     """
     @notice Enumerate valid NFTs
-    @dev Better not call this from another smart contract.  Gas hog
+    @dev With no burn and direct minting, this is simple
     @param _index A counter less than `totalSupply()`
     @return The token identifier for the `_index`th NFT,
     """
 
-    return self.token_log[_index]
+    return _index
    
 
 @external
 @view
-def tokenOfOwnerByIndex(_owner: address, _index: uint256) -> uint256:
+def tokenOfOwnerByIndex(owner: address, index: uint256) -> uint256:
     """
     @notice Enumerate NFTs assigned to an owner
-    @dev Throws if `_index` >= `balanceOf(_owner)` or if `_owner` is the zero address, representing invalid NFTs.
-    @param _owner An address where we are interested in NFTs owned by them
-    @param _index A counter less than `balanceOf(_owner)`
-    @return The token identifier for the `_index`th NFT assigned to `_owner`, (sort order not specified)
+    @dev Throws if `index` >= `balanceOf(owner)` or if `owner` is the zero address, representing invalid NFTs.
+    @param owner An address where we are interested in NFTs owned by them
+    @param index A counter less than `balanceOf(owner)`
+    @return The token identifier for the `index`th NFT assigned to `owner`, (sort order not specified)
     """
-
-    counter: uint256 = 0
-    retval: uint256 = 1001 
-
-    for i in self.token_log:
-        if self.owned_tokens[i] == _owner:
-            if counter == _index:
-                retval = i
-            counter += 1
-
-    if retval == 1001:
-        raise "ERC721Enumerable: global index out of bounds"
-    
-    return retval
+    assert owner != empty(address)
+    assert index < self.balances[owner]
+    return self.token_by_owner[owner][index]
 

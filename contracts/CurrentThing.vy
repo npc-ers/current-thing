@@ -1,7 +1,7 @@
-# @version 0.3.6
+# @version 0.3.7
 
 """
-@title Current Thing
+@title Current Thing ERC-20 Token ($THING)
 @author npcers.eth
 @notice Based on the ERC-20 token standard as defined at
         https://eips.ethereum.org/EIPS/eip-20
@@ -54,7 +54,6 @@ event Transfer:
     value: uint256
 
 
-
 name: public(String[64])
 symbol: public(String[32])
 decimals: public(uint256)
@@ -63,14 +62,14 @@ totalSupply: public(uint256)
 balances: HashMap[address, uint256]
 allowances: HashMap[address, HashMap[address, uint256]]
 
+# Contract Specific Addresses
 npc: public(address)
 owner: public(address)
 minter: public(address)
-image: public(String[128])
 
 # Epoch
 current_epoch : public(uint256)
-current_thing_archive: public(HashMap[uint256, String[128]]) 
+current_thing_archive: public(HashMap[uint256, String[256]]) 
 
 
 @external
@@ -82,7 +81,7 @@ def __init__():
     self.minter = msg.sender
     self.current_epoch = 0
     self.current_thing_archive[0] = "Genesis Thing"
-    self.image = "ipfs://QmestGNuYmwQZheAFJQQuqZBzrsAxyURdRSHT4MCGPRoJD"
+
 
 @view
 @external
@@ -111,10 +110,7 @@ def allowance(_owner : address, _spender : address) -> uint256:
 def approve(_spender : address, _value : uint256) -> bool:
     """
     @notice Approve an address to spend the specified amount of tokens on behalf of msg.sender
-    @dev Beware that changing an allowance with this method brings the risk that someone may use both the old
-         and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this
-         race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards:
-         https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+    @dev Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
     @param _spender The address which will spend the funds.
     @param _value The amount of tokens to be spent.
     @return Success boolean
@@ -140,8 +136,7 @@ def _transfer(_from: address, _to: address, _value: uint256):
 def transfer(_to : address, _value : uint256) -> bool:
     """
     @notice Transfer tokens to a specified address
-    @dev Vyper does not allow underflows, so attempting to transfer more
-         tokens than an account has will revert
+    @dev Vyper does not allow underflows, so attempting to transfer more tokens than an account has will revert
     @param _to The address to transfer to
     @param _value The amount to be transferred
     @return Success boolean
@@ -154,8 +149,7 @@ def transfer(_to : address, _value : uint256) -> bool:
 def transferFrom(_from : address, _to : address, _value : uint256) -> bool:
     """
     @notice Transfer tokens from one address to another
-    @dev Vyper does not allow underflows, so attempting to transfer more
-         tokens than an account has will revert
+    @dev Vyper does not allow underflows, so attempting to transfer more tokens than an account has will revert
     @param _from The address which you want to send tokens from
     @param _to The address which you want to transfer to
     @param _value The amount of tokens to be transferred
@@ -169,12 +163,21 @@ def transferFrom(_from : address, _to : address, _value : uint256) -> bool:
 
 @external
 @view
-def current_thing() -> String[150]:
+def current_thing() -> String[256]:
+    """
+    @notice The Current Thing
+    @return What NPCs support
+    """ 
     return self.current_thing_archive[self.current_epoch]
 
 
 @external
-def new_current_thing(current_thing: String[128]):
+def new_current_thing(current_thing: String[256]):
+    """
+    @notice Store a new current thing
+    @dev Only admin or authorized minter, updates a new epoch
+    @param current_thing The new current thing
+    """ 
     assert msg.sender in [self.owner, self.minter]
     self.current_epoch += 1
     self.current_thing_archive[self.current_epoch] = current_thing
@@ -188,9 +191,15 @@ def _mint(addr: address, amount: uint256):
 
 @external
 def mint(recipient: address, amount: uint256):
+    """
+    @notice Mint tokens
+    @param recipient Receiver of tokens
+    @param amount Quantity to mint
+    @dev Only owner or minter
+    """
+
     assert msg.sender in [self.owner, self.minter]
     self._mint(recipient, amount)
-
 
     
 @external
@@ -215,11 +224,12 @@ def admin_set_minter(new_minter: address):
 
 @external
 def admin_set_npc_addr(addr: address):
+    """
+    @notice Update Address for NPC NFT
+    @param addr New address
+    """
+
     assert msg.sender == self.owner
     self.npc = addr
 
 
-@external
-def admin_update_image(addr: String[128]):
-    assert msg.sender == self.owner
-    self.image = addr

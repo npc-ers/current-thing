@@ -91,36 +91,29 @@ def test_cannot_reuse_coupon(minter, deployer, alice, thing, npc):
 
 
 def test_mint_is_sequential(minter, alice, bob, charlie, token):
+    init_id = token.totalSupply()
     minter.mint(1, {"from": alice, "value": minter.mint_price(1, alice)})
     minter.mint(1, {"from": bob, "value": minter.mint_price(1, bob)})
     minter.mint(1, {"from": charlie, "value": minter.mint_price(1, charlie)})
-    assert token.ownerOf(0) == alice
-    assert token.ownerOf(1) == bob
-    assert token.ownerOf(2) == charlie
+    assert token.ownerOf(init_id + 0) == alice
+    assert token.ownerOf(init_id + 1) == bob
+    assert token.ownerOf(init_id + 2) == charlie
 
 
 def test_mint_multiple_is_sequential(minter, alice, bob, charlie, token):
+    init_id = token.totalSupply()
     minter.mint(2, {"from": alice, "value": minter.mint_price(2, alice)})
     minter.mint(3, {"from": bob, "value": minter.mint_price(3, bob)})
     minter.mint(4, {"from": charlie, "value": minter.mint_price(4, charlie)})
 
     for i in range(2):
-        assert token.ownerOf(i) == alice
+        assert token.ownerOf(i + init_id) == alice
 
     for i in range(2, 5):
-        assert token.ownerOf(i) == bob
+        assert token.ownerOf(i + init_id) == bob
 
     for i in range(5, 9):
-        assert token.ownerOf(i) == charlie
-
-
-@pytest.mark.skip_coverage
-def test_mint_at_limit(minter, alice):
-    for i in range(399):
-        minter.mint(10, {"from": alice, "value": minter.mint_price(10, alice)})
-
-    with brownie.reverts():
-        minter.mint(10, {"from": alice, "value": minter.mint_price(10, alice)})
+        assert token.ownerOf(i + init_id) == charlie
 
 
 def test_can_mint_under_max_whitelist(minter, deployer, bob, npc):
@@ -171,10 +164,32 @@ def test_dropping_mint_cap_hits_prior_minters(minter, bob, deployer, npc):
     with brownie.reverts():
         minter.mint(1, {"from": bob})
 
+
 def test_cannot_mint_to_null_addr(minter, deployer, npc):
     curr_tot = npc.totalSupply()
     with brownie.reverts():
-        minter.admin_mint_nft(ZERO_ADDRESS, {'from': deployer})
+        minter.admin_mint_nft(ZERO_ADDRESS, {"from": deployer})
     assert npc.totalSupply() == curr_tot
 
 
+def test_adding_coupon_token_restricts_nonholder(minter, deployer, alice, thing, npc):
+    qty = minter.whitelist_max()
+    assert minter.mint_price(qty, alice) > 0
+    assert npc.balanceOf(alice) == 0
+
+    # Use $THING as a stand-in for a standard token
+    minter.admin_update_coupon_token(thing, {"from": deployer})
+
+    assert minter.mint_price(qty, alice) > 0
+    with brownie.reverts():
+        minter.mint(qty, {"from": alice})
+    assert npc.balanceOf(alice) == 0
+
+
+@pytest.mark.skip_coverage
+def test_mint_at_limit(minter, alice):
+    for i in range(399):
+        minter.mint(10, {"from": alice, "value": minter.mint_price(10, alice)})
+
+    with brownie.reverts():
+        minter.mint(10, {"from": alice, "value": minter.mint_price(10, alice)})
