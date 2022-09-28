@@ -1,8 +1,13 @@
 #!/usr/bin/python3
 
 import pytest
-from brownie import (NPC, CurrentThing, ERC721TokenReceiverImplementation,
-                     Indoctrinator, accounts)
+from brownie import (
+    NPC,
+    CurrentThing,
+    ERC721TokenReceiverImplementation,
+    Indoctrinator,
+    accounts,
+)
 
 
 @pytest.fixture(scope="function", autouse=True)

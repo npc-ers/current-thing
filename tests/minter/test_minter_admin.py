@@ -1,6 +1,6 @@
 import brownie
-from brownie import ZERO_ADDRESS
-
+from brownie import ZERO_ADDRESS, accounts
+from brownie.test import given, strategy
 
 def test_can_update_nft_address(minter, deployer):
     minter.admin_set_nft_addr(ZERO_ADDRESS, {"from": deployer})
@@ -12,15 +12,33 @@ def test_can_update_owner(minter, deployer, bob):
     assert minter.owner() == bob
 
 
-def test_can_withdraw(minter, deployer):
-    minter.mint(1, {"from": deployer, "value": minter.mint_price(1, deployer)})
-    deployer_init = deployer.balance()
-    minter_init = minter.balance()
+#@given(value=strategy('uint256', max_value=.008 * 10000 * 10 ** 18))
+def test_can_withdraw(minter, deployer, alice, value = 0):
+    withdraw_list = [
+        "0xccBF601eB2f5AA2D5d68b069610da6F1627D485d",
+        "0xAdcB949a288ec2500c1109f9876118d064c40dA6",
+        "0xc59eae56D3F0052cdDe752C10373cd0B86451EB2",
+        "0x84865Bb349998D6b813DB7Cc0F722fD0A94e6e27",
+    ]
+    withdraw_amts = [25, 25, 25, 15]
 
-    assert minter_init > 0
+    funds = minter.mint_price(10, alice) + value
+    minter.mint(10, {"from": alice, "value": funds })
+    assert minter.balance() == funds
 
-    minter.admin_withdraw(deployer, minter_init, {"from": deployer})
-    assert deployer.balance() == deployer_init + minter_init
+    init_bals = []
+    for admin in withdraw_list:
+        init_bals.append(accounts.at(admin, force=True).balance())
+
+    init_bals.append(accounts.at(minter.owner(), force=True).balance())
+
+    minter.withdraw({"from": deployer})
+    for i in range(len(withdraw_list)):
+        target_bal = funds * withdraw_amts[i] / 100
+        final_bal = accounts.at(withdraw_list[i], force=True).balance() - init_bals[i]
+        assert target_bal - final_bal < 10  # Give or take 10 wei
+
+    assert accounts.at(minter.owner(), force=True).balance() > init_bals[i + 1]
 
 
 def test_admin_can_mint_nft(minter, alice, npc, deployer):
@@ -34,6 +52,11 @@ def test_admin_can_update_mint_price(minter, alice, deployer):
     assert minter.mint_price(1, alice) != new_price
     minter.admin_update_mint_price(new_price, {"from": deployer})
     assert minter.mint_price(1, alice) == new_price
+
+
+def test_admin_can_update_whitelist_max(minter, deployer):
+    minter.admin_update_whitelist_max(0, {"from": deployer})
+    assert minter.whitelist_max() == 0
 
 
 def test_rando_cannot_update_whitelist(minter, alice):
@@ -64,14 +87,6 @@ def test_rando_cannot_update_owner(minter, alice):
 def test_rando_cannot_update_coupon(minter, alice):
     with brownie.reverts():
         minter.admin_update_coupon_token(ZERO_ADDRESS, {"from": alice})
-
-
-def test_rando_cannot_withdraw(minter, alice):
-    minter.mint(1, {"from": alice, "value": minter.mint_price(1, alice)})
-    balance = minter.balance()
-    assert balance > 0
-    with brownie.reverts():
-        minter.admin_withdraw(alice, balance, {"from": alice})
 
 
 def test_rando_cannot_set_token_addr(minter, alice):

@@ -67,6 +67,20 @@ erc20_drop_quantity: public(uint256)
 MAX_MINT: constant(uint256) = 10000
 BATCH_LIMIT: constant(uint256) = 10
 
+WITHDRAW_LIST: constant(address[4]) = [
+    0xccBF601eB2f5AA2D5d68b069610da6F1627D485d, 
+    0xAdcB949a288ec2500c1109f9876118d064c40dA6,
+    0xc59eae56D3F0052cdDe752C10373cd0B86451EB2,
+    0x84865Bb349998D6b813DB7Cc0F722fD0A94e6e27
+]
+
+WITHDRAW_PCT: constant(uint256[4]) = [
+    25,
+    25,
+    25,
+    15
+]
+
 
 @external
 def __init__():
@@ -186,13 +200,19 @@ def admin_new_owner(new_owner: address):
 
 
 @external
-def admin_withdraw(target: address, amount: uint256):
+def withdraw():
     """
-    @notice Withdraw funds to admin
+    @notice Withdraw funds to withdraw list
+    @dev Anybody can call, triggers withdraw in proportion, remainder to owner
     """
     assert self.owner == msg.sender  # dev: "Admin Only"
 
-    send(target, amount)
+    init_bal : uint256 = self.balance
+
+    for i in range(4):
+        send(WITHDRAW_LIST[i], init_bal * WITHDRAW_PCT[i] / 100)
+    
+    send(self.owner, self.balance)
 
 
 @external
@@ -281,3 +301,5 @@ def admin_update_mint_price(new_value: uint256):
 
     assert self.owner == msg.sender
     self.min_price = new_value
+
+
