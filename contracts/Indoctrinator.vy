@@ -71,9 +71,9 @@ BATCH_LIMIT: constant(uint256) = 10
 @external
 def __init__():
     self.owner = msg.sender
-    self.min_price = as_wei_value(.008, 'ether') 
+    self.min_price = as_wei_value(0.008, "ether")
     self.whitelist_max = 3
-    self.erc20_drop_quantity = 1000 * 10 ** 18
+    self.erc20_drop_quantity = 1000 * 10**18
     self.is_erc20_drop_live = True
 
 
@@ -132,23 +132,27 @@ def mint(quantity: uint256):
     @notice Mint up to MAX_MINT NFTs at a time.  Also supplies $THING if drop is live.
     @param quantity The number of NFTs to mint
     """
-    assert quantity <= BATCH_LIMIT  #dev: Mint batch capped
+    assert quantity <= BATCH_LIMIT  # dev: Mint batch capped
     assert msg.value >= self._mint_price(quantity, msg.sender)
     supply: uint256 = ERC721(self.nft_addr).totalSupply()
 
-    assert supply + quantity < MAX_MINT # dev: Exceed max mint cap
+    assert supply + quantity < MAX_MINT  # dev: Exceed max mint cap
 
     for i in range(BATCH_LIMIT):
         if i >= quantity:
             break
-        
+
         ERC721(self.nft_addr).mint(msg.sender)
 
     if self.is_erc20_drop_live:
-        ThingToken(self.token_addr).mint(msg.sender, quantity * self.erc20_drop_quantity)
+        ThingToken(self.token_addr).mint(
+            msg.sender, quantity * self.erc20_drop_quantity
+        )
 
     if self._has_coupon(msg.sender):
-        self.used_coupon[msg.sender] += min(quantity, self.whitelist_max - self.used_coupon[msg.sender])
+        self.used_coupon[msg.sender] += min(
+            quantity, self.whitelist_max - self.used_coupon[msg.sender]
+        )
 
 
 @external
@@ -238,12 +242,12 @@ def admin_mint_nft(addr: address):
 @external
 def admin_update_whitelist_max(max_val: uint256):
     """
-    @notice Update number of free mints whitelisted useres get 
+    @notice Update number of free mints whitelisted useres get
     @param max_val New value for whitelist cap
     """
 
     assert self.owner == msg.sender
-    self.whitelist_max = max_val 
+    self.whitelist_max = max_val
 
 
 @external
@@ -260,7 +264,7 @@ def admin_update_erc20_drop_live(status: bool):
 @external
 def admin_update_erc20_drop_quantity(quantity: uint256):
     """
-    @notice Update quantity of tokens disbursed on mint 
+    @notice Update quantity of tokens disbursed on mint
     @param quantity New number of tokens
     """
 
@@ -272,9 +276,8 @@ def admin_update_erc20_drop_quantity(quantity: uint256):
 def admin_update_mint_price(new_value: uint256):
     """
     @notice Update mint price
-    @param new_value New mint price 
+    @param new_value New mint price
     """
 
     assert self.owner == msg.sender
     self.min_price = new_value
-

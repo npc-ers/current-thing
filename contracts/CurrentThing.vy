@@ -68,8 +68,8 @@ owner: public(address)
 minter: public(address)
 
 # Epoch
-current_epoch : public(uint256)
-current_thing_archive: public(HashMap[uint256, String[256]]) 
+current_epoch: public(uint256)
+current_thing_archive: public(HashMap[uint256, String[256]])
 
 
 @external
@@ -91,12 +91,12 @@ def balanceOf(_owner: address) -> uint256:
     @param _owner Address to query the balance of
     @return Token balance
     """
-    return self.balances[_owner] 
+    return self.balances[_owner]
 
 
 @view
 @external
-def allowance(_owner : address, _spender : address) -> uint256:
+def allowance(_owner: address, _spender: address) -> uint256:
     """
     @notice Getter to check the amount of tokens that an owner allowed to a spender
     @param _owner The address which owns the funds
@@ -107,7 +107,7 @@ def allowance(_owner : address, _spender : address) -> uint256:
 
 
 @external
-def approve(_spender : address, _value : uint256) -> bool:
+def approve(_spender: address, _value: uint256) -> bool:
     """
     @notice Approve an address to spend the specified amount of tokens on behalf of msg.sender
     @dev Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
@@ -133,7 +133,7 @@ def _transfer(_from: address, _to: address, _value: uint256):
 
 
 @external
-def transfer(_to : address, _value : uint256) -> bool:
+def transfer(_to: address, _value: uint256) -> bool:
     """
     @notice Transfer tokens to a specified address
     @dev Vyper does not allow underflows, so attempting to transfer more tokens than an account has will revert
@@ -146,7 +146,7 @@ def transfer(_to : address, _value : uint256) -> bool:
 
 
 @external
-def transferFrom(_from : address, _to : address, _value : uint256) -> bool:
+def transferFrom(_from: address, _to: address, _value: uint256) -> bool:
     """
     @notice Transfer tokens from one address to another
     @dev Vyper does not allow underflows, so attempting to transfer more tokens than an account has will revert
@@ -167,7 +167,7 @@ def current_thing() -> String[256]:
     """
     @notice The Current Thing
     @return What NPCs support
-    """ 
+    """
     return self.current_thing_archive[self.current_epoch]
 
 
@@ -177,7 +177,7 @@ def new_current_thing(current_thing: String[256]):
     @notice Store a new current thing
     @dev Only admin or authorized minter, updates a new epoch
     @param current_thing The new current thing
-    """ 
+    """
     assert msg.sender in [self.owner, self.minter]
     self.current_epoch += 1
     self.current_thing_archive[self.current_epoch] = current_thing
@@ -187,7 +187,7 @@ def new_current_thing(current_thing: String[256]):
 def _mint(addr: address, amount: uint256):
     self.balances[addr] += amount
     self.totalSupply += amount
-   
+
 
 @external
 def mint(recipient: address, amount: uint256):
@@ -201,7 +201,7 @@ def mint(recipient: address, amount: uint256):
     assert msg.sender in [self.owner, self.minter]
     self._mint(recipient, amount)
 
-    
+
 @external
 def admin_set_owner(new_owner: address):
     """
@@ -231,5 +231,3 @@ def admin_set_npc_addr(addr: address):
 
     assert msg.sender == self.owner
     self.npc = addr
-
-

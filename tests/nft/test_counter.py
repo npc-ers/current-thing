@@ -1,5 +1,7 @@
-import pytest, brownie
-from brownie import accounts, exceptions
+import brownie
+import pytest
+from brownie import ZERO_ADDRESS, accounts, exceptions
+
 
 #
 # Inquire initial count

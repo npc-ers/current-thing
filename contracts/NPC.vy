@@ -54,9 +54,9 @@ interface ERC721Receiver:
         ) -> bytes4: nonpayable
 
 
-# @dev Emits when ownership of any NFT changes by any mechanism. 
-#      This event emits when NFTs are created (`from` == 0) and destroyed (`to` == 0). 
-#      Exception: during contract creation, any number of NFTs may be created and assigned without emitting. 
+# @dev Emits when ownership of any NFT changes by any mechanism.
+#      This event emits when NFTs are created (`from` == 0) and destroyed (`to` == 0).
+#      Exception: during contract creation, any number of NFTs may be created and assigned without emitting.
 #      At the time of any transfer, the approved address for that NFT (if any) is reset to none.
 # @param _from Sender of NFT (if address is zero address it indicates token creation).
 # @param _to Receiver of NFT (if address is zero address it indicates token destruction).
@@ -68,8 +68,8 @@ event Transfer:
     _tokenId: indexed(uint256)
 
 
-# @dev This emits when the approved address for an NFT is changed or reaffirmed. 
-#      The zero address indicates there is no approved address. 
+# @dev This emits when the approved address for an NFT is changed or reaffirmed.
+#      The zero address indicates there is no approved address.
 #      When a Transfer event emits, this also indicates any approved address resets to none.
 # @param _owner Owner of NFT.
 # @param _approved Address that we are approving.
@@ -81,7 +81,7 @@ event Approval:
     _tokenId: indexed(uint256)
 
 
-# @dev This emits when an operator is enabled or disabled for an owner. 
+# @dev This emits when an operator is enabled or disabled for an owner.
 #      The operator can manage all NFTs of the owner.
 # @param _owner Owner of NFT.
 # @param _operator Address to which we are setting operator rights.
@@ -110,10 +110,10 @@ contract_uri: String[128]
 token_by_owner: HashMap[address, HashMap[uint256, uint256]]
 token_count: uint256
 
-owned_tokens: HashMap[uint256, address]                       # @dev NFT ID to the address that owns it.
-token_approvals: HashMap[uint256, address]                    # @dev NFT ID to approved address.
-operator_approvals: HashMap[address, HashMap[address, bool]]  # @dev Owner address to mapping of operator addresses.
-balances: HashMap[address, uint256]                           # @dev Owner address to token count.
+owned_tokens: HashMap[uint256, address]                       # @dev NFT ID to the address that owns it
+token_approvals: HashMap[uint256, address]                    # @dev NFT ID to approved address
+operator_approvals: HashMap[address, HashMap[address, bool]]  # @dev Owner address to mapping of operator addresses
+balances: HashMap[address, uint256]                           # @dev Owner address to token count
 
 # @dev Static list of supported ERC165 interface ids
 SUPPORTED_INTERFACES: constant(bytes4[5]) = [
@@ -124,7 +124,7 @@ SUPPORTED_INTERFACES: constant(bytes4[5]) = [
     0x5B5E139F,  # ERC721Metadata
 ]
 
-# Custom NPC 
+# Custom NPC
 revealed: public(bool)
 default_uri: public(String[150])
 
@@ -136,15 +136,11 @@ def __init__():
 
     self.owner = msg.sender
     self.minter = msg.sender
-    
-    self.base_uri = (
-        "ipfs://bafybeihenlt6iw25kd6abtonqm5m6dctgeaxoftdhtcyubthvln4y6hezi/"
-    )
-    self.contract_uri = (
-        "ipfs://QmTPTu31EEFawxbXEiAaZehLajRAKc7YhxPkTSg31SNVSe"
-    )
 
+    self.base_uri = "ipfs://bafybeihenlt6iw25kd6abtonqm5m6dctgeaxoftdhtcyubthvln4y6hezi/"
+    self.contract_uri = "ipfs://QmTPTu31EEFawxbXEiAaZehLajRAKc7YhxPkTSg31SNVSe"
     self.default_uri = "ipfs://QmPQZadNVNeJ729toJ3ZTjSvC2xhgsQDJuwfSJRN43T2eu"
+
     self.revealed = False
 
 
@@ -170,13 +166,13 @@ def balanceOf(owner: address) -> uint256:
     """
     @notice Count all NFTs assigned to an owner.
     @dev Returns the number of NFTs owned by `owner`.
-         Throws if `owner` is the zero address. 
+         Throws if `owner` is the zero address.
          NFTs assigned to the zero address are considered invalid.
     @param owner Address for whom to query the balance.
     @return The address of the owner of the NFT
     """
 
-    assert owner != empty(address) # dev: "ERC721: balance query for the zero address"
+    assert owner != empty(address)  # dev: "ERC721: balance query for the zero address"
     return self.balances[owner]
 
 
@@ -192,7 +188,7 @@ def ownerOf(token_id: uint256) -> address:
     """
 
     owner: address = self.owned_tokens[token_id]
-    assert owner != empty(address) # dev: "ERC721: owner query for nonexistent token"
+    assert owner != empty(address)  # dev: "ERC721: owner query for nonexistent token"
     return owner
 
 
@@ -207,7 +203,9 @@ def getApproved(token_id: uint256) -> address:
     @return The approved address for this NFT, or the zero address if there is none
     """
 
-    assert self.owned_tokens[token_id] != empty(address) # dev: "ERC721: approved query for nonexistent token"
+    assert self.owned_tokens[token_id] != empty(
+        address
+    )  # dev: "ERC721: approved query for nonexistent token"
     return self.token_approvals[token_id]
 
 
@@ -255,7 +253,7 @@ def _add_token_to(_to: address, _token_id: uint256):
     """
 
     # Throws if `_token_id` is owned by someone
-    assert self.owned_tokens[_token_id] == empty(address) 
+    assert self.owned_tokens[_token_id] == empty(address)
 
     # Change the owner
     self.owned_tokens[_token_id] = _to
@@ -308,10 +306,12 @@ def _transfer_from(_from: address, _to: address, _token_id: uint256, _sender: ad
     """
 
     # Throws if `_to` is the zero address
-    assert _to != empty(address) # dev : "ERC721: transfer to the zero address"
+    assert _to != empty(address)  # dev : "ERC721: transfer to the zero address"
 
     # Check requirements
-    assert self._is_approved_or_owner(_sender, _token_id) # dev : "ERC721: transfer caller is not owner nor approved"
+    assert self._is_approved_or_owner(
+        _sender, _token_id
+    )  # dev : "ERC721: transfer caller is not owner nor approved"
 
     # Clear approval. Throws if `_from` is not the current owner
     self._clear_approval(_from, _token_id)
@@ -366,10 +366,14 @@ def safeTransferFrom(
     self._transfer_from(from_addr, to_addr, token_id, msg.sender)
 
     if to_addr.is_contract:  # check if `to_addr` is a contract address
-        return_value: bytes4 = ERC721Receiver(to_addr).onERC721Received(msg.sender, from_addr, token_id, data)
+        return_value: bytes4 = ERC721Receiver(to_addr).onERC721Received(
+            msg.sender, from_addr, token_id, data
+        )
 
         # Throws if transfer destination is a contract which does not implement 'onERC721Received'
-        assert return_value == method_id("onERC721Received(address,address,uint256,bytes)", output_type=bytes4)
+        assert return_value == method_id(
+            "onERC721Received(address,address,uint256,bytes)", output_type=bytes4
+        )
 
 
 @external
@@ -387,15 +391,17 @@ def approve(approved: address, token_id: uint256):
     owner: address = self.owned_tokens[token_id]
 
     # Throws if `token_id` is not a valid NFT
-    assert owner != empty(address) # dev: "ERC721: owner query for nonexistent token"
+    assert owner != empty(address)  # dev: "ERC721: owner query for nonexistent token"
 
     # Throws if `approved` is the current owner
-    assert approved != owner # dev: "ERC721: approval to current owner"
+    assert approved != owner  # dev: "ERC721: approval to current owner"
 
     # Check requirements
     is_owner: bool = self.owned_tokens[token_id] == msg.sender
     is_approved_all: bool = (self.operator_approvals[owner])[msg.sender]
-    assert is_owner or is_approved_all # dev: "ERC721: approve caller is not owner nor approved for all"
+    assert (
+        is_owner or is_approved_all
+    )  # dev: "ERC721: approve caller is not owner nor approved for all"
 
     # Set the approval
     self.token_approvals[token_id] = approved
@@ -435,10 +441,10 @@ def mint(receiver: address):
 
     # Checks
     assert msg.sender in [self.minter, self.owner]
-    assert receiver != empty(address) # dev: Cannot mint to empty address
+    assert receiver != empty(address)  # dev: Cannot mint to empty address
 
     # Add NFT. Throws if `_token_id` is owned by someone
-    token_id: uint256 = self.token_count 
+    token_id: uint256 = self.token_count
     self._add_token_to(receiver, token_id)
     self.token_count += 1
 
@@ -456,7 +462,7 @@ def tokenURI(token_id: uint256) -> String[256]:
     @dev Throws if `_token_id` is not a valid NFT. URIs are defined in RFC 6686. The URI may point to a JSON file that conforms to the "ERC721 Metadata JSON Schema".
     """
     if self.owned_tokens[token_id] == empty(address):
-        raise # dev: "ERC721URIStorage: URI query for nonexistent token"
+        raise  # dev: "ERC721URIStorage: URI query for nonexistent token"
 
     if self.revealed:
         return concat(self.base_uri, uint2str(token_id))
@@ -496,7 +502,7 @@ def set_contract_uri(new_uri: String[66]):
     @param new_uri New URI for the contract
     """
 
-    assert msg.sender in [self.owner, self.minter] # dev: Only Admin
+    assert msg.sender in [self.owner, self.minter]  # dev: Only Admin
     self.contract_uri = new_uri
 
 
@@ -506,12 +512,12 @@ def set_owner(new_addr: address):
     @notice Admin function to update owner
     @param new_addr The new owner address to take over immediately
     """
-       
+
     assert msg.sender == self.owner  # dev: Only Owner
     self.owner = new_addr
 
 
-@external 
+@external
 def set_revealed(flag: bool):
     """
     @notice Admin function to reveal collection.  If not revealed, all NFTs show default_uri
@@ -525,7 +531,7 @@ def set_revealed(flag: bool):
 def set_minter(new_address: address):
     """
     @notice Admin function to set a new minter address
-    @dev Update the address authorized to mint 
+    @dev Update the address authorized to mint
     @param new_address New minter address
     """
 
@@ -535,14 +541,14 @@ def set_minter(new_address: address):
 
 @external
 def admin_withdraw_erc20(coin: address, target: address, amount: uint256):
-   """
-   @notice Withdraw ERC20 tokens accidentally sent to contract
-   @param coin ERC20 address
-   @param target Address to receive
-   @param amount Wei
-   """
-   assert self.owner == msg.sender # dev: "Admin Only"
-   ERC20(coin).transfer(target, amount)
+    """
+    @notice Withdraw ERC20 tokens accidentally sent to contract
+    @param coin ERC20 address
+    @param target Address to receive
+    @param amount Wei
+    """
+    assert self.owner == msg.sender  # dev: "Admin Only"
+    ERC20(coin).transfer(target, amount)
 
 
 ## ERC-721 Enumerable Functions
@@ -570,7 +576,7 @@ def tokenByIndex(_index: uint256) -> uint256:
     """
 
     return _index
-   
+
 
 @external
 @view
@@ -585,4 +591,3 @@ def tokenOfOwnerByIndex(owner: address, index: uint256) -> uint256:
     assert owner != empty(address)
     assert index < self.balances[owner]
     return self.token_by_owner[owner][index]
-
