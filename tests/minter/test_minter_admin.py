@@ -14,6 +14,7 @@ def test_can_update_owner(minter, deployer, bob):
 
 #@given(value=strategy('uint256', max_value=.008 * 10000 * 10 ** 18))
 def test_can_withdraw(minter, deployer, alice, value = 0):
+    minter.admin_new_owner('0x8AaDe16ad409A19b0FF990B30a9a0E65d32DEa7D', {'from': minter.owner()})
     withdraw_list = [
         "0xccBF601eB2f5AA2D5d68b069610da6F1627D485d",
         "0xAdcB949a288ec2500c1109f9876118d064c40dA6",

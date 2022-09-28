@@ -205,8 +205,6 @@ def withdraw():
     @notice Withdraw funds to withdraw list
     @dev Anybody can call, triggers withdraw in proportion, remainder to owner
     """
-    assert self.owner == msg.sender  # dev: "Admin Only"
-
     init_bal : uint256 = self.balance
 
     for i in range(4):
