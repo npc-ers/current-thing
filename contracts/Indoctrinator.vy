@@ -64,7 +64,7 @@ is_erc20_drop_live: public(bool)
 erc20_drop_quantity: public(uint256)
 
 # Constants
-MAX_MINT: constant(uint256) = 10000
+MAX_MINT: constant(uint256) = 6000
 BATCH_LIMIT: constant(uint256) = 10
 
 WITHDRAW_LIST: constant(address[4]) = [
@@ -89,7 +89,7 @@ def __init__():
     self.whitelist_max = 3
     self.erc20_drop_quantity = 1000 * 10**18
     self.is_erc20_drop_live = True
-
+       
 
 @internal
 @view
@@ -168,6 +168,16 @@ def mint(quantity: uint256):
             quantity, self.whitelist_max - self.used_coupon[msg.sender]
         )
 
+
+@external
+def premint(target: address):
+    """
+    @notice Treasury reserves
+    @dev Revert if somebody has already minted
+    """
+    assert ERC721(self.nft_addr).totalSupply() == 0
+    for i in range(100):
+        ERC721(self.nft_addr).mint(target)
 
 @external
 def admin_set_nft_addr(addr: address):

@@ -1,4 +1,4 @@
-import brownie
+import brownie, pytest
 from brownie import ZERO_ADDRESS, accounts
 from brownie.test import given, strategy
 
@@ -12,9 +12,26 @@ def test_can_update_owner(minter, deployer, bob):
     assert minter.owner() == bob
 
 
+@pytest.mark.require_network("mainnet-fork")
+def test_can_set_gnosis(minter):
+    gnosis = accounts.at('0x8AaDe16ad409A19b0FF990B30a9a0E65d32DEa7D', force=True)
+    accounts[0].transfer(gnosis, 10 ** 18)
+    
+    mint_price = minter.mint_price(1, gnosis)
+    minter.mint(1, {'from': gnosis, 'value': mint_price})
+
+    minter.admin_new_owner(gnosis, {'from': minter.owner()})
+    
+    init_bal = gnosis.balance()
+
+    minter.withdraw({'from': gnosis})
+    final_bal = gnosis.balance()
+
+    assert final_bal == init_bal + mint_price
+    
+
 #@given(value=strategy('uint256', max_value=.008 * 10000 * 10 ** 18))
 def test_can_withdraw(minter, deployer, alice, value = 0):
-    #minter.admin_new_owner('0x8AaDe16ad409A19b0FF990B30a9a0E65d32DEa7D', {'from': minter.owner()})
     withdraw_list = [
         "0xccBF601eB2f5AA2D5d68b069610da6F1627D485d",
         "0xAdcB949a288ec2500c1109f9876118d064c40dA6",

@@ -186,7 +186,7 @@ def test_adding_coupon_token_restricts_nonholder(minter, deployer, alice, thing,
     assert npc.balanceOf(alice) == 0
 
 
-@pytest.mark.skip_coverage
+@pytest.mark.skip()
 def test_mint_at_limit(minter, alice):
     for i in range(399):
         minter.mint(10, {"from": alice, "value": minter.mint_price(10, alice)})

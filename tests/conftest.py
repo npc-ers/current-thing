@@ -80,21 +80,20 @@ def minted_token_id():
 
 @pytest.fixture(scope="module")
 def premint():
-    return 50
+    return 100
 
 
 @pytest.fixture(scope="module")
-def minter(npc, deployer, thing, premint):
+def minter(npc, deployer, thing, premint, accounts):
+ 
     minter = Indoctrinator.deploy({"from": deployer})
-    minter.admin_set_nft_addr(npc, {"from": deployer})
     npc.set_minter(minter, {"from": deployer})
+    minter.admin_set_nft_addr(npc, {"from": deployer})
+    minter.premint(accounts[9])
 
     thing.admin_set_minter(minter, {"from": deployer})
     minter.admin_set_token_addr(thing, {"from": deployer})
 
-    # Premint
-    for i in range(premint):
-        minter.admin_mint_nft(deployer, {"from": deployer})
     return minter
 
 

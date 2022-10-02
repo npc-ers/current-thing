@@ -137,11 +137,11 @@ def __init__():
     self.owner = msg.sender
     self.minter = msg.sender
 
-    self.base_uri = "ipfs://bafybeihenlt6iw25kd6abtonqm5m6dctgeaxoftdhtcyubthvln4y6hezi/"
+    self.base_uri = "ipfs://bafybeibzrvcnrfzy6q5t5tkzmzktdqwlbvywtgzxybdkycubquh3e5rl2u/"
     self.contract_uri = "ipfs://QmTPTu31EEFawxbXEiAaZehLajRAKc7YhxPkTSg31SNVSe"
     self.default_uri = "ipfs://QmPQZadNVNeJ729toJ3ZTjSvC2xhgsQDJuwfSJRN43T2eu"
 
-    self.revealed = False
+    self.revealed = True
 
 
 @pure
