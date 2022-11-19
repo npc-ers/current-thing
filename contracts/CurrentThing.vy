@@ -187,7 +187,8 @@ def new_current_thing(current_thing: String[256]):
 def _mint(addr: address, amount: uint256):
     self.balances[addr] += amount
     self.totalSupply += amount
-
+    
+    log Transfer(ZERO_ADDRESS, addr, amount)
 
 @external
 def mint(recipient: address, amount: uint256):

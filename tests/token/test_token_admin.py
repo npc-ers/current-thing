@@ -63,3 +63,12 @@ def test_cannot_burn(thing, alice, deployer):
     with brownie.reverts():
         thing.transfer(ZERO_ADDRESS, 10**18, {"from": alice})
     assert thing.balanceOf(alice) == 10**18
+
+
+def test_mint_fires_event(thing, alice, deployer):
+    tx = thing.mint(alice, 10**18, {'from': deployer})
+    event = tx.events['Transfer']
+    assert event['sender'] == ZERO_ADDRESS
+    assert event['receiver'] == alice
+    assert event['value'] == 10 ** 18
+

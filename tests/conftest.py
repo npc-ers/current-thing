@@ -7,6 +7,7 @@ from brownie import (
     ERC721TokenReceiverImplementation,
     Indoctrinator,
     accounts,
+    Vote
 )
 
 
@@ -84,12 +85,12 @@ def premint():
 
 
 @pytest.fixture(scope="module")
-def minter(npc, deployer, thing, premint, accounts):
+def minter(npc, deployer, thing, premint, accounts, alice):
  
     minter = Indoctrinator.deploy({"from": deployer})
     npc.set_minter(minter, {"from": deployer})
     minter.admin_set_nft_addr(npc, {"from": deployer})
-    minter.premint(accounts[9])
+    minter.premint(accounts[0])
 
     thing.admin_set_minter(minter, {"from": deployer})
     minter.admin_set_token_addr(thing, {"from": deployer})
@@ -105,3 +106,10 @@ def token_metadata():
 @pytest.fixture(scope="module")
 def tokenReceiver(deployer):
     return ERC721TokenReceiverImplementation.deploy({"from": deployer})
+
+
+@pytest.fixture(scope="module")
+def staker(npc, thing, alice):
+    return Vote.deploy({'from': alice})
+
+
